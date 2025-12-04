@@ -1,0 +1,6 @@
+/.venv/
+.env
+.idea
+.vscode
+.cursur
+__pycache__
