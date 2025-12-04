@@ -13,3 +13,10 @@ documentation/paper/build/
 *.lof
 *.lot
 
+
+/.venv/
+.env
+.idea
+.vscode
+.cursur
+__pycache__

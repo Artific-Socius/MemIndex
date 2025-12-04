@@ -1,0 +1,52 @@
+[project]
+name = "memindex"
+version = "0.1.0"
+description = "MemIndex - 长期记忆基准测试框架"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiohttp>=3.9.0",
+    "black>=25.11.0",
+    "datasets>=4.4.1",
+    "flake8>=7.3.0",
+    "google-genai>=1.52.0",
+    "gradio==5.27.0",
+    "litellm>=1.80.7",
+    "loguru>=0.7.3",
+    "matplotlib>=3.10.7",
+    "mem0ai>=1.0.1",
+    "mypy>=1.19.0",
+    "numpy>=2.3.5",
+    "openai>=2.8.1",
+    "portalocker>=3.2.0",
+    "pytest>=9.0.1",
+    "python-dotenv>=1.2.1",
+    "rich>=14.2.0",
+    "ruamel-yaml>=0.18.16",
+    "scipy>=1.16.3",
+    "tiktoken>=0.12.0",
+    "tqdm>=4.67.1",
+]
+
+[project.scripts]
+memindex = "MemIndex.main:run"
+memindex-viewer = "MemIndex.utils.report_viewer:main_cli"
+
+[tool.pytest.ini_options]
+pythonpath = [
+    ".",
+    "MemIndex",
+    "BoolQuestion_LLM_Test"
+]
+testpaths = [
+    "BoolQuestion_LLM_Test/tests"
+]
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["MemIndex*"]
