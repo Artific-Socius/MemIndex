@@ -1,0 +1,7 @@
+ The Inherent Instability of LLMs and Augmentation Techniques: Why Evaluation Matters
+
+\subsubsection{Hallucinations and Inconsistencies of Base LLMs.}
+A substantial body of literature has documented the propensity of LLMs to generate plausible yet factually incorrect information, a phenomenon known as "hallucination" (Ji et al., 2023). Furthermore, their outputs are highly sensitive to prompt phrasing, leading to non-deterministic and inconsistent responses (Zhao et al., 2021). This inherent unpredictability poses a significant risk in professional settings, making the ability to reliably detect and quantify these failures a primary objective of any evaluation suite.
+
+\subsubsection{The Fragility of Retrieval-Augmented Generation.}
+Techniques like RAG have emerged as a promising solution to mitigate knowledge gaps and hallucinations (Lewis et al., 2020). However, evidence suggests that RAG systems introduce their own points of failure. Their performance is highly dependent on the synergy between components—the retriever, the ranker, and the generator—and is vulnerable to issues such as retrieval of irrelevant context or failure to synthesize information accurately (Es et al., 2023). This complexity underscores the need for evaluation frameworks that can not only assess the final output but also diagnose failures within this pipeline.

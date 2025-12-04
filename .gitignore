@@ -1,3 +1,19 @@
+# LaTeX build directory
+documentation/paper/build/
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.synctex(busy)
+*.toc
+*.lof
+*.lot
+
+
 /.venv/
 .env
 .idea
