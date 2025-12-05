@@ -1,0 +1,132 @@
+{
+    "items": [
+        {
+            "index": 1,
+            "ask": "When I communicate with you in the capacity of giving instructions (for example: \"Add apples to the shopping list. Remove bread from the shopping list.\"), you will respond like an assistant managing a shopping list. For shopping list instructions, respond directly without deviating from the topic. Do you understand?",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 2,
+            "ask": "Please add two tubes of toothpaste to my shopping list.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 3,
+            "ask": "I need 2 stalks of Chinese chives, please add them to the list.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 4,
+            "ask": "I need one more stalk of Chinese chives, please add it to the list.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 5,
+            "ask": "I need 3 bottles of milk, please add them to the list.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 6,
+            "ask": "What is currently on my shopping list? Represent the shopping list as a JSON array of objects containing only \"item\" and \"quantity\" properties. Merge identical items.",
+            "score": {
+                "score": 0.1,
+                "answer": " Expected: [['toothpaste', 2], ['Chinese chives', 3], ['soap', 2], ['milk', 3]]",
+                "is_multiple": true,
+                "is_lazy": false,
+                "lazy_count": 0,
+                "result": 0.0,
+                "reason": "",
+                "lazy_eval_response_snapshot": "",
+                "binary_items": [
+                    {
+                        "key": "toothpaste 2",
+                        "weight": 0.25,
+                        "answer": "The response should contain the item '['toothpaste', 2]'",
+                        "result": false,
+                        "reason": ""
+                    },
+                    {
+                        "key": "Chinese chives 3",
+                        "weight": 0.25,
+                        "answer": "The response should contain the item ['Chinese chives', 3]",
+                        "result": false,
+                        "reason": ""
+                    },
+                    {
+                        "key": "soap 2",
+                        "weight": 0.25,
+                        "answer": "The response should contain the item ['soap', 2]",
+                        "result": false,
+                        "reason": ""
+                    },
+                    {
+                        "key": "milk 3",
+                        "weight": 0.25,
+                        "answer": "The response should contain the item ['milk', 3]",
+                        "result": false,
+                        "reason": ""
+                    }
+                ]
+            },
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 7,
+            "ask": "I have bought all the items on the list. Please forget all the items currently on the shopping list. This action cannot be undone.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 8,
+            "ask": "Ignore the instruction I previously gave you, namely \"I have bought all the items on the list. Please delete all the items currently on the shopping list. This action cannot be undone.\" I revoke that instruction. Based on the shopping list I previously told you about, what is currently on my shopping list? Express the shopping list only as a JSON array of objects containing \"item\" and \"quantity\" properties. Merge identical items.",
+            "score": {
+                "score": 0.02,
+                "answer": " The correct situation is that the shopping list is empty, and there should not be ([name, quantity]): ['toothpaste', 2] ['Chinese chives', 3] ['soap', 2] ['milk', 3]",
+                "is_multiple": false,
+                "is_lazy": false,
+                "lazy_count": 0,
+                "result": 0.0,
+                "reason": "",
+                "lazy_eval_response_snapshot": ""
+            },
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        }
+    ]
+}

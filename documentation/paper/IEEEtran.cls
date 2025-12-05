@@ -499,8 +499,31 @@
 % not Times Roman.
 \@IEEEcompsocnotconfonly{\renewcommand{\rmdefault}{ppl}}
 
+% Chinese language support using CJK package (for pdfLaTeX)
+% Load CJKutf8 package early to ensure compatibility with other packages (e.g., xcolor)
+% This must be loaded before font selection and before user packages to avoid conflicts
+\RequirePackage{CJKutf8}
+
+% Define CJK font family (can be customized)
+% Options: gbsn (宋体), gkai (楷体), ghei (黑体), fs (仿宋)
+\newcommand{\@IEEEcjkfont}{gbsn}  % Default: Song (宋体)
+
 % enable the selected main text font
 \normalfont\selectfont
+
+% Automatically start CJK environment at document begin
+% Use LaTeX kernel's \@begindocumenthook to ensure execution at document level
+% This hook is executed right after \begin{document}, outside any groups
+\g@addto@macro\@begindocumenthook{%
+  \begin{CJK}{UTF8}{\@IEEEcjkfont}%
+}
+
+% Automatically end CJK environment at document end
+% Note: This replaces the original AtEndDocument hook for conference notice
+\AtEndDocument{%
+  \end{CJK}%
+  \ifCLASSOPTIONconference\@IEEEconsolenoticeconference\fi
+}
 
 
 \ifCLASSOPTIONcomsoc
@@ -526,8 +549,8 @@
 \typeout{}}
 
 
-% we can send console reminder messages to the user here
-\AtEndDocument{\ifCLASSOPTIONconference\@IEEEconsolenoticeconference\fi}
+% Note: CJK environment end is now handled in the CJK setup section above
+% The conference notice is also handled there
 
 
 % warn about the use of single column other than for draft mode

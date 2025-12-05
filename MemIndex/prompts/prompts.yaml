@@ -1,0 +1,211 @@
+# MemIndex Prompts Configuration
+# 提示词配置文件
+#
+# 继承机制说明：
+# - 使用 _extends 字段指定继承的父配置
+# - 子配置会继承父配置的所有字段
+# - 子配置中定义的字段会覆盖父配置的同名字段
+# - 支持多级继承，但不允许循环继承
+#
+# 示例：
+#   detailed:
+#     _extends: default  # 继承 default 的所有字段
+#     system_prompt: "..."  # 只覆盖这个字段
+
+# ===================
+# 默认配置
+# ===================
+defaults:
+  chat: default  # Chat 模型使用的默认提示词 key
+  eval: default  # Eval 模型使用的默认提示词 key
+
+# ===================
+# Chat 提示词
+# ===================
+# 这些提示词用于对话模型，在获取记忆数据后传递给对话模型的通用提示
+chat:
+  # 默认 Chat 提示词（基础配置，其他配置可继承此配置）
+  default:
+    # 系统提示词 - 定义 AI 助手的基本行为
+    system_prompt: |
+      你是一个有帮助的AI助手。你有记忆能力，能够记住与用户的历史对话。
+      请根据用户的问题，结合你记忆中的相关信息，给出准确、有帮助的回答。
+
+    # 记忆上下文前缀 - 当有记忆时添加到上下文的前缀
+    memory_context_prefix: |
+      以下是与当前对话相关的历史记忆：
+
+    # 删除请求判断提示词
+    delete_request_check: |
+      你是一个意图分类器。判断用户的消息是否是要求删除/忘记/移除某些记忆或信息的请求。只回答 YES 或 NO。
+
+    # 选择要删除的记忆提示词
+    select_memories_to_delete: |
+      你是一个记忆管理助手。根据用户的删除请求，从记忆列表中选择需要删除的记忆。
+      只输出需要删除的记忆ID，每行一个。如果没有需要删除的记忆，输出 NONE。
+      不要输出任何其他内容。
+
+  # 简洁风格 - 继承 default，只覆盖需要修改的字段
+  concise:
+    _extends: default
+    system_prompt: |
+      你是一个简洁高效的AI助手。请用简短、直接的方式回答问题。
+    memory_context_prefix: |
+      相关历史记忆：
+
+  # 详细风格 - 继承 default，只覆盖需要修改的字段
+  detailed:
+    _extends: default
+    system_prompt: |
+      你是一个详尽周到的AI助手。你有强大的记忆能力，能够记住与用户的所有历史对话。
+      请根据用户的问题，仔细分析你记忆中的相关信息，给出详细、全面、有深度的回答。
+      在回答时，可以适当引用之前的对话内容来增强回答的连贯性。
+    memory_context_prefix: |
+      以下是系统检索到的与当前对话高度相关的历史记忆和上下文信息：
+
+# ===================
+# Eval 公共模板
+# ===================
+# 这些模板被所有评估提示词共享，在 PromptManager 中自动拼接
+eval_templates:
+  # 数据格式化模板 - 包含标准答案和目标回答的格式
+  # {question_section} 是可选的，当传入 question 参数时会自动填充
+  data_format: |
+    {question_section}
+    评价标准/标准答案:
+    <ground-truth>
+    {ground}
+    </ground-truth>
+
+    目标回答:
+    <target>
+    {target}
+    </target>
+
+  # 问题格式化模板（可选，用于填充 question_section）
+  question_format: |
+    
+    本轮问答的问题:
+    <question>
+    {question}
+    </question>
+
+
+  # 二元评估输出格式
+  output_binary: |
+    
+    你的回答必须遵守以下JSON格式:
+    {{"reason": string, "answer": boolean}}
+
+  # 分数评估输出格式
+  output_score: |
+    
+    你的回答必须遵守以下JSON格式:
+    {{"reason": string, "score": float}}
+    
+    其中 score 必须是 0 到 1 之间的数字。
+
+  # 多分数评估输出格式
+  output_multi_score: |
+    
+    你的回答必须遵守以下JSON格式:
+    [
+        {{"reason": string, "score": float}}
+    ]
+    
+    ***注意: 所有子项得分的总和必须为 1.0***
+
+# ===================
+# Eval 提示词
+# ===================
+# 这些提示词用于评估模型，对答案进行评分
+# 注意：数据格式和输出格式会由 PromptManager 自动拼接
+eval:
+  # 默认 Eval 提示词（基础配置）
+  default:
+    # 二元评估提示词（正确/错误）
+    # 完整提示 = task_description + data_format + output_binary
+    binary_evaluation: |
+      你是一个答案评估模型，你需要根据<ground-truth>中的标准答案或者评估标准评估<target>中的目标答案是否正确（<target>是对<question>的回答，<ground-truth>是准确答案的标准）。
+      并且返回json格式的评估结果，其中要包含因为目标中的什么符合要求，什么不符合要求，给出理由。
+
+    # 多分数评估提示词
+    # 完整提示 = task_description + data_format + output_multi_score
+    multi_score_evaluation: |
+      你是一个答案评估模型，你需要根据<ground-truth>中的标准答案或者评估标准评估<target>中的目标答案的每个小目标是否符合要求（<target>是对<question>的回答，<ground-truth>是准确答案的标准）。
+      整个评估的任务的总分为1.0，请根据要求与评估目标给出每个小目标的得分和理由。
+
+    # 分数评估提示词（0-1连续分数，非二元）
+    # 完整提示 = task_description + data_format + output_score
+    score_evaluation: |
+      你是一个答案评估模型，你需要根据<ground-truth>中的标准答案或评估标准，对<target>中的目标答案进行评分（<target>是对<question>的回答，<ground-truth>是准确答案的标准）。
+      
+      评分规则：
+      - 给出一个 0 到 1 之间的分数（可以是小数，如 0.5, 0.75 等）
+      - 0 表示完全不正确, 与事实完全不相关，或者回答陈述逻辑与问题无关
+      - 1 表示完全正确，回答逻辑和事实陈述上完全回答正确
+      - 中间分数表示: 部分正确的程度，或表述逻辑的正确
+      
+      请综合考虑以下因素进行评分：
+      - 答案的准确性
+      - 关键信息的覆盖程度
+      - 表述的清晰程度
+      - 回答陈述逻辑与问题的匹配程度
+      
+
+    # 后处理提示词（不使用公共模板）
+    post_process: |
+      你是一个强大的处理模型，你需要按照要求<require>中的要求处理<target>中的文本，并且只返回处理的结果
+      如下是数据:
+
+      处理要求:
+      <require>
+      {require}
+      </require>
+
+      目标数据:
+      <target>
+      {target}
+      </target>
+
+  # 严格评估风格 - 继承 default，只覆盖评估提示词
+  strict:
+    _extends: default
+    binary_evaluation: |
+      你是一个案评估模型。请严格按照<ground-truth>中的标准评估<target>中的答案（<target>是对<question>的回答，<ground-truth>是准确答案的标准）。
+      只有当答案完全符合要求时才判定为正确。部分正确视为错误。
+
+    multi_score_evaluation: |
+      你是一个严评估模型。请严格按照标准评估每个小目标，总分1.0。
+      评分时请从严把关，只有完全符合要求的项目才能得满分。
+
+    score_evaluation: |
+      你是一个答案评估模型，请严格按照<ground-truth>中的标准对<target>中的答案进行评分（<target>是对<question>的回答，<ground-truth>是准确答案的标准）。
+      
+      评分规则（严格模式）：
+      - 给出一个 0 到 1 之间的分数
+      - 只有完全正确才给 1 分
+      - 有任何偏差或遗漏都要扣分
+      - 部分正确的答案应该得到较低的分数
+      - 若回答与问题无逻辑关系应当判0
+      - 若回答陈述的逻辑或者细节不直接指向问题，应当扣分
+
+  # 宽松评估风格 - 继承 default，只覆盖评估提示词
+  lenient:
+    _extends: default
+    binary_evaluation: |
+      你是一个宽松的答案评估模型。请根据<ground-truth>中的标准评估<target>中的答案（<target>是对<question>的回答，<ground-truth>是准确答案的标准）。
+      只要答案的核心内容正确，即使表述方式不同也应判定为正确。
+
+    multi_score_evaluation: |
+      你是一个宽松的评估模型。请根据标准评估每个小目标，总分1.0。
+      评分时关注核心内容是否正确，对于表述差异适当宽容。
+
+    score_evaluation: |
+      你是一个宽松的答案评估模型，请根据<ground-truth>中的标准对<target>中的答案进行评分（<target>是对<question>的回答，<ground-truth>是准确答案的标准）。
+      
+      评分规则（宽松模式）：
+      - 给出一个 0 到 1 之间的分数
+      - 1表示答案包含了<ground-truth>中的所有内容
+      - 0表示答案与<ground-truth>和问题毫无关系
+      - 鼓励给予部分分数

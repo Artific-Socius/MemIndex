@@ -1,0 +1,190 @@
+# BoolQ评估实验 - Prompt模板配置
+# 支持多种风格和评估模式
+
+# ===== 验证模式 (validate) =====
+# 给段落+问题+答案，让LLM判断答案是否正确
+
+validate:
+  # 基础角色说明
+  base_instruction: |
+    # Role
+    你是一个基于所提供的文本进行逻辑校验的Assistant，你只能根据Passage提供的内容进行逻辑推理，分析Question中的二元问题以研究是否与给出的Answer匹配
+
+  # 数据格式模板
+  data_template: |
+    # Input Data
+    - **Passage (事实依据): **{passage}
+    - **Question (问题): **{question}
+    - **Answer (待评估的Human Judgement): **{preset_answer}
+
+  # 不同风格的约束模板
+  styles:
+    direct:
+      constraint: |
+        # Instructions
+        请严格按照以下步骤进行思考:
+        1. 分析Passage文本逻辑，作为Question答案的唯一推理依据
+        2. 仅根据Passage对Question进行推理，并给出答案
+        3. 对比Human Judgement的Answer，判断其是否正确
+
+        严格遵循: 仅输出'true'(答案正确)或'false'(答案错误)，不要输出任何其他信息。
+      use_instructions: false
+
+    sse:
+      reason_first:
+        constraint: |
+          # Output Format
+          请严格按照以下格式输出，不要包含其他废话: 
+
+          reason: 1. Cause: ..., Outcome: ...; 2. Cause: ..., Outcome: ...
+          answer: [True / False]
+      
+      reason_after:
+        constraint: |
+          # Output Format
+          请严格按照以下格式输出，不要包含其他废话: 
+
+          answer: [True / False]
+          reason: 1. Cause: ..., Outcome: ...; 2. Cause: ..., Outcome: ...
+      
+      use_instructions: true
+      instructions: |
+        # Instructions
+        请严格按照以下步骤进行思考和输出: 
+
+        1. 分析Passage文本逻辑，作为Question答案的唯一推理依据
+        2. 仅根据Passage对Question进行推理，并给出答案
+        3. 仅将推理过程整理成条目输出到reason
+        4. 对比Human Judgement的Answer，判断标注是否正确，输出到answer
+           - answer为true表示Human Judgement标注正确
+           - answer为false表示Human Judgement标注存在矛盾/错误
+
+    json:
+      reason_first:
+        constraint: |
+          # Output Format (JSON)
+          You must output a valid JSON object:
+          ```json
+          {
+            "reason": "1. Cause: ..., Outcome: ...; 2. Cause: ..., Outcome: ...; ......",
+            "answer": <boolean>
+          }
+          ```
+          - answer为true表示Human Judgement标注正确
+          - answer为false表示Human Judgement标注存在矛盾/错误
+        
+        reasoning_suffix: ""
+        no_reasoning_suffix: ""
+      
+      reason_after:
+        constraint: |
+          # Output Format (JSON)
+          You must output a valid JSON object:
+          ```json
+          {
+            "answer": <boolean>,
+            "reason": "1. Cause: ..., Outcome: ...; 2. Cause: ..., Outcome: ...; ......"
+          }
+          ```
+          - answer为true表示Human Judgement标注正确
+          - answer为false表示Human Judgement标注存在矛盾/错误
+        
+        reasoning_suffix: ""
+        no_reasoning_suffix: ""
+      
+      use_instructions: true
+      instructions: |
+        # Instructions
+        请严格按照以下步骤进行思考和输出: 
+
+        1. 分析Passage文本逻辑，作为Question答案的唯一推理依据
+        2. 仅根据Passage对Question进行推理，并给出答案
+        3. 仅将推理过程整理成条目输出到reason
+        4. 对比Human Judgement的Answer，并给出answer
+
+# ===== 回答模式 (answer) =====
+# 给段落+问题，让LLM直接回答True/False
+
+answer:
+  # 基础角色说明
+  base_instruction: |
+    # Role
+    你是一个基于所提供的文本进行阅读理解的Assistant，你只能根据Passage提供的内容进行逻辑推理，回答Question中的二元问题
+
+  # 数据格式模板
+  data_template: |
+    # Input Data
+    - **Passage (事实依据): **{passage}
+    - **Question (问题): **{question}
+
+  # 不同风格的约束模板
+  styles:
+    direct:
+      constraint: |
+        请根据Passage的内容，回答Question中的问题。
+
+        严格遵循: 仅输出'true'或'false'，不要输出任何其他无关信息。
+      use_instructions: false
+
+    sse:
+      reason_first:
+        constraint: |
+          # Output Format
+          请严格按照以下格式输出，不要包含其他废话: 
+
+          reason: [在此处填入基于Passage的分析]
+          answer: [True / False]
+      
+      reason_after:
+        constraint: |
+          # Output Format
+          请严格按照以下格式输出，不要包含其他废话: 
+
+          answer: [True / False]
+          reason: [在此处填入基于Passage的分析]
+      
+      use_instructions: true
+      instructions: |
+        # Instructions
+        请严格按照以下步骤进行思考和输出: 
+
+        1.  **推理 (Reasoning)**: 
+            * 阅读[Passage]的内容，理解其中的事实和逻辑关系。
+            * 分析[Question]中的问题，判断答案应该是True还是False。
+
+        2.  **输出结果 (Final Output)**:
+            * 请严格使用 "reason:" 和 "answer:" 作为字段名称。
+
+    json:
+      reason_first:
+        constraint: |
+          Response format (JSON):
+          ```json
+          {
+            "reason": "<string>",
+            "answer": <boolean>
+          }
+          ```
+          Based on the passage, answer the question with true or false.
+        
+        reasoning_suffix: " Provide detailed analysis in the reason field."
+        no_reasoning_suffix: " Keep the reasoning field empty or brief."
+      
+      reason_after:
+        constraint: |
+          Response format (JSON):
+          ```json
+          {
+            "answer": <boolean>,
+            "reason": "<string>"
+          }
+          ```
+          Based on the passage, answer the question with true or false.
+        
+        reasoning_suffix: " Provide detailed analysis in the reason field."
+        no_reasoning_suffix: " Keep the reasoning field empty or brief."
+      
+      use_instructions: true
+      instructions: |
+        # Instructions
+        Based on the passage, answer the question with true or false.

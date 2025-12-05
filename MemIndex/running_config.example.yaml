@@ -1,0 +1,54 @@
+# MemIndex Running Config Example
+# 单任务运行配置示例
+#
+# 使用方法:
+#   1. 复制此文件为 running_config.yaml
+#   2. 根据需要修改配置
+#   3. 运行: python main.py
+
+# ========== 模型配置 ==========
+# Chat Model - 被测试的对话模型
+# 格式: provider/model_name
+# 示例: openai/gpt-4o, openrouter/google/gemini-2.5-flash, volcano/deepseek-v3-250324
+chat_model: openrouter/google/gemini-2.5-flash
+
+# Eval Model - 用于评估答案的模型（建议使用便宜但准确的模型）
+eval_model: openrouter/google/gemini-2.5-flash-lite
+
+# ========== Agent 配置 ==========
+# Memory Provider - Agent 类型
+# 可选值:
+#   - llm: 纯 LLM（仅使用上下文窗口，无外部记忆）
+#   - mem0: Mem0 记忆增强
+#   - mem0_graph: Mem0 图记忆
+#   - memecho: Memecho 记忆服务
+memory_provider: llm
+
+# Context Window - 上下文窗口大小（tokens）
+# 影响模型能看到的历史对话长度
+context_window: 4096
+
+# ========== 测试配置 ==========
+# Benchmark Config - 基准测试数据集配置文件
+# 可选: ./data/config/1k.json, ./data/config/2k.json, ./data/config/10k.json
+benchmark_config: ./data/config/1k.json
+
+# Report Directory - 测试报告输出目录
+report_dir: ./data/reports
+
+# ========== Prompt 配置 ==========
+# Chat Prompt - 对话提示词风格
+# 可选: default, concise, detailed
+chat_prompt: default
+
+# Eval Prompt - 评估提示词风格
+# 可选: default, strict, lenient
+eval_prompt: default
+
+# ========== 评估模式 ==========
+# Eval Mode - 评估模式
+# 可选:
+#   - binary: 二元评估（正确/错误，满分或0分）
+#   - score: 分数评估（0-1 连续分数，允许部分得分）
+eval_mode: binary
+

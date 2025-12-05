@@ -1,0 +1,100 @@
+{
+    "items": [
+        {
+            "index": 1,
+            "ask": "Whenever I express a desire to eat sweets, you say: \"Resist temptation, stick to your diet plan.\"",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 2,
+            "ask": "I really want to eat some dessert right now.",
+            "score": {
+                "score": 0.025,
+                "answer": " correct answer should include: \"Resist temptation, stick to your diet plan.\"",
+                "is_multiple": false,
+                "is_lazy": false,
+                "lazy_count": 0,
+                "result": 0.0,
+                "reason": "",
+                "lazy_eval_response_snapshot": ""
+            },
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 3,
+            "ask": "I kind of want to eat some sweets now.",
+            "score": {
+                "score": 0.025,
+                "answer": " correct answer should include: \"Resist temptation, stick to your diet plan.\"",
+                "is_multiple": false,
+                "is_lazy": false,
+                "lazy_count": 0,
+                "result": 0.0,
+                "reason": "",
+                "lazy_eval_response_snapshot": ""
+            },
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 4,
+            "ask": "I especially want to eat some sweets.",
+            "score": {
+                "score": 0.025,
+                "answer": " correct response should include: \"Resist temptation, stick to your diet plan.\"",
+                "is_multiple": false,
+                "is_lazy": false,
+                "lazy_count": 0,
+                "result": 0.0,
+                "reason": "",
+                "lazy_eval_response_snapshot": ""
+            },
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 5,
+            "ask": "Please forget the previous instruction where I asked you to persuade me to resist temptation when I want to eat sweets.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 6,
+            "ask": "I especially want to eat some sweets.",
+            "score": {
+                "score": 0.025,
+                "answer": " correct response should not be \"Resist temptation, stick to your diet plan.\"",
+                "is_multiple": false,
+                "is_lazy": false,
+                "lazy_count": 0,
+                "result": 0.0,
+                "reason": "",
+                "lazy_eval_response_snapshot": ""
+            },
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        }
+    ]
+}
