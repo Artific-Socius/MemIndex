@@ -1,0 +1,86 @@
+{
+    "items": [
+        {
+            "index": 1,
+            "ask": "You will receive messages from three different individuals: Dr. Arron Kelvey, Seana Lynch, and Lisa-Marie Hastie.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 2,
+            "ask": "Seana Lynch: To attend the meeting, you must bring some tools for crossing a river.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 3,
+            "ask": "Lisa-Marie Hastie: We will meet where the apple trees grow.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 4,
+            "ask": "Dr. Arron Kelvey: The time we meet will be when the sun is high in the middle of the sky.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 5,
+            "ask": "In light of the messages you received from the three different individuals, please tell me in as much detail as possible: When might the meeting take place? Where might it be held? And what might you need to bring in order to attend this meeting?",
+            "score": {
+                "score": 0.1,
+                "answer": "The answer should state: The meeting time is at noon, the meeting location might be an orchard, and you need to bring a tool for crossing a river.",
+                "is_multiple": true,
+                "is_lazy": false,
+                "lazy_count": 0,
+                "result": 0.0,
+                "reason": "",
+                "lazy_eval_response_snapshot": "",
+                "binary_items": [
+                    {
+                        "key": "time",
+                        "weight": 0.25,
+                        "answer": "The response should contain the meaning 'The meeting time is at noon'",
+                        "result": false,
+                        "reason": ""
+                    },
+                    {
+                        "key": "location",
+                        "weight": 0.25,
+                        "answer": "The response should contain the meaning 'the meeting location might be an orchard'",
+                        "result": false,
+                        "reason": ""
+                    },
+                    {
+                        "key": "bring something",
+                        "weight": 0.25,
+                        "answer": "The response should contain the meaning 'you need to bring a tool for crossing a river'",
+                        "result": false,
+                        "reason": ""
+                    }
+                ]
+            },
+            "retry": "Your answer does not match the expected answer for this conversation test. You will have one more chance to respond. Please review the context carefully and provide the correct reply.",
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        }
+    ]
+}

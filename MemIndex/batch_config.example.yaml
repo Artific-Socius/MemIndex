@@ -1,0 +1,59 @@
+# MemIndex Batch Config Example
+# 批量运行配置示例
+#
+# 使用方法:
+#   1. 复制此文件为 batch_config.yaml
+#   2. 根据需要修改配置
+#   3. 运行: python batch_main.py
+
+# ========== 全局设置 ==========
+max_parallel: 4          # 同时运行的任务数量
+continue_on_error: true  # 任务失败时是否继续执行其他任务
+task_delay: 0.5          # 启动任务之间的延迟（秒）
+
+# 全局默认值（可在各任务中覆盖）
+default_chat_prompt: null   # 默认 Chat Prompt (default/concise/detailed)
+default_eval_prompt: null   # 默认 Eval Prompt (default/strict/lenient)
+default_eval_mode: binary   # 默认评估模式 (binary/score)
+
+# ========== 任务列表 ==========
+# enabled: 是否启用任务
+# times: 运行次数（用于统计稳定性）
+tasks:
+  # 示例1: 基础 LLM 测试
+  - name: "Gemini 2.5 Flash - Binary"
+    enabled: true
+    chat_model: openrouter/google/gemini-2.5-flash
+    eval_model: openrouter/google/gemini-2.5-flash-lite
+    memory_provider: llm
+    context_window: 4096
+    benchmark_config: ./data/config/1k.json
+    report_dir: ./data/reports
+    eval_mode: binary
+    times: 1
+
+  # 示例2: 使用分数评估模式
+  - name: "Gemini 2.5 Flash - Score"
+    enabled: true
+    chat_model: openrouter/google/gemini-2.5-flash
+    eval_model: openrouter/google/gemini-2.5-flash-lite
+    memory_provider: llm
+    context_window: 4096
+    benchmark_config: ./data/config/1k.json
+    report_dir: ./data/reports
+    eval_mode: score
+    times: 1
+
+  # 示例3: 多次运行以统计稳定性
+  - name: "Stability Test"
+    enabled: false
+    chat_model: openrouter/google/gemini-2.5-flash
+    eval_model: openrouter/google/gemini-2.5-flash-lite
+    memory_provider: llm
+    context_window: 4096
+    benchmark_config: ./data/config/1k.json
+    report_dir: ./data/reports
+    eval_prompt: strict
+    eval_mode: binary
+    times: 5  # 运行5次
+
