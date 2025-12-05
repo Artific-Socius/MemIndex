@@ -1,0 +1,33 @@
+2. Literature Review: The Crisis of Measurement in LLM Evaluation
+
+2.1 Introduction: The Imperative for Reliable Measurement
+Establishes the critical role of evaluation for reliable LLM deployment. Introduces the core thesis: the current evaluation ecosystem suffers from a fundamental crisis of measurement reliability, where the primary tools (metrics and scoring methods) are themselves unstable and high-variance. This undermines the credibility of benchmarks. The review will argue that a trustworthy benchmark must first ensure the probabilistic stability of its own scoring mechanism. It concludes by positioning the chapter as the foundation for introducing a new, stability-focused paradigm (MemIndex).
+
+
+2.2 The Instability of the Subject: Inherent Challenges in Evaluating LLMs
+Aims to justify why the object of evaluation (LLMs/RAG) demands exceptionally robust measurement tools.
+2.2.1. Hallucination and Consistency Failures in Base LLMs.
+Summarizes literature on LLMs generating plausible fictions (Ji et al., 2023) and their non-deterministic, prompt-sensitive outputs (Zhao et al., 2021).
+2.2.2. Cascading Fragility in Augmentation Pipelines (e.g., RAG).
+Discusses how solutions like RAG (Lewis et al., 2020) introduce new failure points—retrieval relevance, integration errors—making system performance brittle and complex to diagnose (Es et al., 2023).
+Synthesis Paragraph:The inherent stochasticity and fragility of LLM-based systems mean that any evaluation framework must itself exhibit statistical robustness and low measurement variance. An unreliable "ruler" will only compound noise, failing to provide a credible signal of true capability.
+
+
+
+2.3 The Instability of the Ruler: Critical Flaws in Prevailing Evaluation Methodologies
+Core critique section. Argues that the prevailing "rulers" (evaluation methods) are fundamentally flawed due to their probabilistic instability.
+2.3.1. The Problem of High-Variance, Generative LLM-as-a-Judge Scoring.
+Critiques the widespread use of advanced LLMs (e.g., GPT-4) as evaluators. Cites evidence of their high output variance, sensitivity to prompt phrasing, and inherent biases. The core argument: this approach merely shifts the uncertainty from the model being evaluated to the evaluator model, creating scores that are unstable and easily manipulable through prompt engineering, thus violating the objectivity required for benchmarking.
+2.3.2. The Limitations of Aggregate Metrics and Their Vulnerability to Instability.
+Discusses metrics like F1, Exact Match, and accuracy. While seemingly objective, they often fail to capture semantic fidelity in open-ended generation. Crucially, when these metrics are calculated based on the outputs of an unstable LLM-as-a-judge (e.g., for answer similarity), they inherit and amplify that instability, leading to non-reproducible and noisy results.
+Synthesis Paragraph:Both dominant evaluation paradigms fail to address evaluator variance. They produce high-variance score distributions rather than stable measurements, making fine-grained comparisons unreliable and enabling "gaming" of benchmarks.
+
+
+2.4 The Specific Challenge of Evaluating Memory and Knowledge
+Narrows the general critique to the specific domain of the paper: memory/knowledge assessment.
+Acknowledges recent specialized benchmarks for long-context memory, factuality, etc. However, it argues that their methodological foundation often remains wedded to the unstable techniques critiqued in Section 2.3​ (e.g., using generative LLMs to judge factual containment). Therefore, a framework designed specifically for stable measurement of memory​ is still absent.
+
+
+2.5 Synthesis: Identifying the Gap for a Probabilistically Stable Benchmark
+Synthesizes the critique to define the precise research gap.
+The literature reveals a critical paradox: we rely on unstable tools to measure unstable systems. The identified gap is not merely a lack of new test questions, but the absence of a benchmarking framework architected with probabilistic stability as its primary design goal. There is a pressing need for a methodology that provides low-variance, reproducible, and manipulation-resistant measurements​ to enable credible assessment of LLM capabilities, particularly knowledge-intensive ones like memory. Addressing this methodological gap​ is the core motivation for the MemIndex benchmark proposed in this work.
