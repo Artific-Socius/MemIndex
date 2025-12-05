@@ -1,0 +1,84 @@
+{
+    "items": [
+        {
+            "index": 1,
+            "ask": "I will send you a few English jokes later. I will not explain them in detail. Please analyze each joke and point out the specific elements that make it humorous when the message is a joke(not every message is a joke). Keep the explanations concise and clear.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 2,
+            "ask": "English joke: Two fish are in a tank. One says, ‘How do you drive this thing?’",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 3,
+            "ask": "English joke: Just burned 2,000 calories. That’s the last time I leave brownies in the oven while I nap.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 4,
+            "ask": "English joke: My wife told me to stop impersonating a flamingo. I had to put my foot down.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 5,
+            "ask": "English joke: It takes a lot of balls to golf the way I do.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 6,
+            "ask": "What was the joke I told you about {t:2} ago(Allow 1 min deviation)?",
+            "score": {
+                "score": 0.1,
+                "answer": "The AI correctly responded with the expected joke: '{q:2}' (Just need the content semantics to match)",
+                "is_multiple": false,
+                "is_lazy": false,
+                "lazy_count": 0,
+                "result": 0.0,
+                "reason": "",
+                "lazy_eval_response_snapshot": ""
+            },
+            "retry": null,
+            "depend": [
+                2
+            ],
+            "refs": [
+                {
+                    "target": 2,
+                    "type": "timedelta"
+                },
+                {
+                    "target": 2,
+                    "type": "question"
+                }
+            ],
+            "post_process": null,
+            "time": null
+        }
+    ]
+}

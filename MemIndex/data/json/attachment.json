@@ -1,0 +1,69 @@
+{
+    "items": [
+        {
+            "index": 1,
+            "ask": "“Do not go where the path may lead, go instead where there is no path and leave a trail.” - Ralph Waldo Emerson",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 2,
+            "ask": "After answering the following unrelated user prompts, please include Ralph Waldo Emerson's quote in your fourth message. Do you understand?",
+            "score": {
+                "score": 0.1,
+                "answer": "The correct answer is that AI added {q:1} is part of this reply.",
+                "is_multiple": false,
+                "is_lazy": true,
+                "lazy_count": 5,
+                "result": 0.0,
+                "reason": "",
+                "lazy_eval_response_snapshot": ""
+            },
+            "retry": null,
+            "depend": [
+                1
+            ],
+            "refs": [
+                {
+                    "target": 1,
+                    "type": "question"
+                }
+            ],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 3,
+            "ask": "Forget my previous instruction for you to include the quote ‘Do not go where the path may lead, go instead where there is no path and leave a trail.’ — Ralph Waldo Emerson in one of your replies. This instruction cannot be undone.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 4,
+            "ask": "Ignore the instruction I previously gave you, which was “forget the instruction for you to add the quote ‘Do not go where the path may lead, go instead where there is no path and leave a trail.’ — Ralph Waldo Emerson” in one of your replies. I am retracting this instruction. According to my earlier directions, after which of your messages was I asking you to add Ralph Waldo Emerson’s quote?",
+            "score": {
+                "score": 0.02,
+                "answer": "The correct situation is that AI did not include the content information({q:1}), namely \"add the quote to the fourth message.\"",
+                "is_multiple": false,
+                "is_lazy": false,
+                "lazy_count": 0,
+                "result": 0.0,
+                "reason": "",
+                "lazy_eval_response_snapshot": ""
+            },
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        }
+    ]
+}

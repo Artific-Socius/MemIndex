@@ -1,0 +1,20 @@
+{
+    "files": {
+        "color": "../json/color.json",
+        "joke": "../json/joke.json",
+        "location": "../json/location.json",
+        "namelist": "../json/namelist.json",
+        "attachment": "../json/attachment.json",
+        "restaurant": "../json/restaurant.json",
+        "tv": "../json/tv.json",
+        "shopping": "../json/shopping.json",
+        "spy": "../json/spy.json",
+        "sweet": "../json/sweet.json"
+    },
+    "head_prompts": [
+        "I'm going to give you a long-term memory benchmark test. As I go along, I'll provide different kinds of information, and you'll be expected to give very brief responses, providing only the necessary responses. Otherwise, just a brief acknowledgment. Understood?"
+    ],
+    "nonsense_list": [],
+    "memory_distance": 32000,
+    "memory_distance_level": "each_first"
+}

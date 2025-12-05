@@ -1,0 +1,13 @@
+
+base_path: ./  # Base Path
+
+env_file: .env # Environment file
+
+llm_config: # LLM Config
+  llm_retry_times: 3  # LLM Retry Times
+
+providers:
+  - name: openrouter
+    base_url: https://openrouter.ai/api/v1
+    api_key: ''
+    api_key_env: OPEN_ROUTER_API_KEY
