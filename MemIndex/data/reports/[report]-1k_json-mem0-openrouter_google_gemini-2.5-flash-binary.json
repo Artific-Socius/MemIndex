@@ -1,0 +1,11 @@
+{
+    "abs_path": "C:\\Users\\leizi\\project\\MemIndex\\MemIndex\\data\\reports\\[report]-1k_json-mem0-openrouter_google_gemini-2.5-flash-binary.json",
+    "folder": "C:\\Users\\leizi\\project\\MemIndex\\MemIndex\\data\\reports\\1k_json-mem0-openrouter_google_gemini-2.5-flash-binary",
+    "current_benchmarks": [
+        "benchmark-result-[0]-2025-12-05T08_48_14.323997.json"
+    ],
+    "create_time": "2025-12-05T08:48:14.323997",
+    "update_time": "2025-12-05T08:48:14.327997",
+    "agent": "mem0",
+    "model": "gemini-2.5-flash"
+}

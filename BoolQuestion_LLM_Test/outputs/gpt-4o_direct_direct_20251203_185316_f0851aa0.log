@@ -1,0 +1,257 @@
+2025-12-03 18:53:16.927 | INFO     | utils.logger:__init__:260 - 实验日志初始化完成
+2025-12-03 18:53:16.927 | INFO     | utils.logger:__init__:261 - 日志文件: BoolQuestion_LLM_Test\outputs\gpt-4o_direct_direct_20251203_185316_f0851aa0.log
+2025-12-03 18:53:16.927 | INFO     | utils.logger:__init__:262 - 数据文件: BoolQuestion_LLM_Test\outputs\gpt-4o_direct_direct_20251203_185316_f0851aa0.jsonl
+2025-12-03 18:53:16.931 | DEBUG    | prompt_manager.prompt_manager:_load_yaml:70 - 已加载Prompt配置: C:\Users\leizi\project\MemIndex\BoolQuestion_LLM_Test\prompt_manager\prompts.yaml
+2025-12-03 18:53:16.932 | DEBUG    | prompt_manager.prompt_manager:__init__:57 - PromptManager初始化: mode=answer, style=direct, reasoning=False, order=reason-after
+2025-12-03 18:53:16.932 | INFO     | utils.dataset_manager:load:84 - 正在加载 BoolQ 数据集 (split: validation)...
+2025-12-03 18:53:23.324 | INFO     | utils.dataset_manager:load:99 - 数据集加载完成, 共 3270 条数据
+2025-12-03 18:53:23.324 | INFO     | utils.dataset_manager:load:107 - 限制数据条数为 100
+2025-12-03 18:53:23.326 | INFO     | utils.dataset_manager:_load_dirty_hashes:143 - 发现 1 个脏数据文件
+2025-12-03 18:53:23.344 | DEBUG    | utils.dataset_manager:_load_single_dirty_file:232 - [dirty_data_final.jsonl] 加载: 1680/1680 有效
+2025-12-03 18:53:23.344 | INFO     | utils.dataset_manager:_log_dirty_data_summary:285 - 脏数据加载完成: 1/1 文件, 1680 条唯一哈希 (1680 有效/0 无效)
+2025-12-03 18:53:23.344 | DEBUG    | utils.dataset_manager:_log_dirty_data_summary:299 -   ✓ dirty_data_final.jsonl: 1680/1680 有效
+2025-12-03 18:53:23.350 | INFO     | utils.logger:log_evaluation_start:315 - 开始评估: 模型=openrouter/openai/gpt-4o, 风格=direct
+2025-12-03 18:53:23.351 | INFO     | utils.logger:log_evaluation_start:316 - 数据集: 100 条, 并发数: 25
+2025-12-03 18:53:23.351 | INFO     | utils.logger:log_evaluation_start:318 - 推理模式: 禁用, 顺序: reason-after
+2025-12-03 18:53:23.351 | DEBUG    | utils.logger:start:445 - 异步结果写入器已启动
+2025-12-03 18:53:23.353 | INFO     | utils.dataset_manager:__iter__:350 - 跳过 14 条脏数据, 索引: [6, 8, 12, 13, 21, ... , 66, 84, 86]
+2025-12-03 18:53:27.374 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#15[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[yellow]4.01s[/yellow], LP=[green]-0.000[/green], [dim]tok=192[/dim], [cyan]$0.000488[/cyan]
+2025-12-03 18:53:27.379 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#28[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[yellow]4.01s[/yellow], LP=[green]-0.000[/green], [dim]tok=182[/dim], [cyan]$0.000463[/cyan]
+2025-12-03 18:53:27.382 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#7[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[yellow]4.02s[/yellow], LP=[green]-0.000[/green], [dim]tok=244[/dim], [cyan]$0.000617[/cyan]
+2025-12-03 18:53:27.401 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#27[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[yellow]4.03s[/yellow], LP=[red]-0.387[/red], [dim]tok=326[/dim], [cyan]$0.000822[/cyan]
+2025-12-03 18:53:27.433 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#9[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[yellow]4.07s[/yellow], LP=[green]-0.000[/green], [dim]tok=219[/dim], [cyan]$0.000555[/cyan]
+2025-12-03 18:53:27.539 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#23[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[yellow]4.17s[/yellow], LP=[green]-0.000[/green], [dim]tok=194[/dim], [cyan]$0.000492[/cyan]
+2025-12-03 18:53:27.543 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#25[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[yellow]4.18s[/yellow], LP=[green]-0.000[/green], [dim]tok=212[/dim], [cyan]$0.000538[/cyan]
+2025-12-03 18:53:27.551 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#16[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[yellow]4.19s[/yellow], LP=[green]-0.062[/green], [dim]tok=261[/dim], [cyan]$0.000660[/cyan]
+2025-12-03 18:53:27.729 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#30[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[yellow]4.36s[/yellow], LP=[green]-0.000[/green], [dim]tok=242[/dim], [cyan]$0.000612[/cyan]
+2025-12-03 18:53:27.962 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#10[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[yellow]4.60s[/yellow], LP=[green]-0.000[/green], [dim]tok=286[/dim], [cyan]$0.000723[/cyan]
+2025-12-03 18:53:27.991 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#14[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[yellow]4.63s[/yellow], LP=[green]-0.000[/green], [dim]tok=271[/dim], [cyan]$0.000685[/cyan]
+2025-12-03 18:53:28.118 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#17[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[yellow]4.75s[/yellow], LP=[green]-0.000[/green], [dim]tok=171[/dim], [cyan]$0.000435[/cyan]
+2025-12-03 18:53:28.159 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#35[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.78s[/green], LP=[green]-0.000[/green], [dim]tok=255[/dim], [cyan]$0.000645[/cyan]
+2025-12-03 18:53:28.738 | DEBUG    | utils.logger:log_item_result:396 - [[red]✗[/red]] [blue]#33[/blue]: pred=[cyan]False[/cyan], exp=[yellow]True[/yellow], lat=[yellow]1.36s[/yellow], LP=[green]-0.030[/green], [dim]tok=206[/dim], [cyan]$0.000523[/cyan]
+2025-12-03 18:53:28.759 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#44[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.77s[/green], LP=[green]-0.000[/green], [dim]tok=205[/dim], [cyan]$0.000520[/cyan]
+2025-12-03 18:53:28.929 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#46[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.77s[/green], LP=[green]-0.000[/green], [dim]tok=228[/dim], [cyan]$0.000577[/cyan]
+2025-12-03 18:53:29.257 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#48[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.50s[/green], LP=[green]-0.000[/green], [dim]tok=292[/dim], [cyan]$0.000737[/cyan]
+2025-12-03 18:53:29.330 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#31[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[red]5.96s[/red], LP=[green]-0.000[/green], [dim]tok=173[/dim], [cyan]$0.000440[/cyan]
+2025-12-03 18:53:29.411 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#47[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.67s[/green], LP=[green]-0.000[/green], [dim]tok=286[/dim], [cyan]$0.000723[/cyan]
+2025-12-03 18:53:29.474 | DEBUG    | utils.logger:log_item_result:396 - [[red]✗[/red]] [blue]#49[/blue]: pred=[cyan]False[/cyan], exp=[yellow]True[/yellow], lat=[green]0.54s[/green], LP=[green]-0.000[/green], [dim]tok=220[/dim], [cyan]$0.000558[/cyan]
+2025-12-03 18:53:29.618 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#45[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[yellow]1.50s[/yellow], LP=[green]-0.000[/green], [dim]tok=199[/dim], [cyan]$0.000505[/cyan]
+2025-12-03 18:53:29.665 | WARNING  | llm_client.base:_retry_with_backoff:121 - LLM请求失败 (尝试 1/6): APIError: litellm.APIError: APIError: OpenrouterException - Cannot connect to host openrouter.ai:443 ssl:defau... 等待 5.0s 后重试
+2025-12-03 18:53:29.675 | WARNING  | llm_client.base:_retry_with_backoff:121 - LLM请求失败 (尝试 1/6): APIError: litellm.APIError: APIError: OpenrouterException - Cannot connect to host openrouter.ai:443 ssl:defau... 等待 5.0s 后重试
+2025-12-03 18:53:29.683 | WARNING  | llm_client.base:_retry_with_backoff:121 - LLM请求失败 (尝试 1/6): APIError: litellm.APIError: APIError: OpenrouterException - Cannot connect to host openrouter.ai:443 ssl:defau... 等待 5.0s 后重试
+2025-12-03 18:53:29.693 | WARNING  | llm_client.base:_retry_with_backoff:121 - LLM请求失败 (尝试 1/6): APIError: litellm.APIError: APIError: OpenrouterException - Cannot connect to host openrouter.ai:443 ssl:defau... 等待 5.0s 后重试
+2025-12-03 18:53:29.703 | WARNING  | llm_client.base:_retry_with_backoff:121 - LLM请求失败 (尝试 1/6): APIError: litellm.APIError: APIError: OpenrouterException - Cannot connect to host openrouter.ai:443 ssl:defau... 等待 5.0s 后重试
+2025-12-03 18:53:29.712 | WARNING  | llm_client.base:_retry_with_backoff:121 - LLM请求失败 (尝试 1/6): APIError: litellm.APIError: APIError: OpenrouterException - Cannot connect to host openrouter.ai:443 ssl:defau... 等待 5.0s 后重试
+2025-12-03 18:53:29.714 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#32[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[red]6.35s[/red], LP=[green]-0.000[/green], [dim]tok=197[/dim], [cyan]$0.000500[/cyan]
+2025-12-03 18:53:29.787 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#51[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.53s[/green], LP=[green]-0.000[/green], [dim]tok=228[/dim], [cyan]$0.000577[/cyan]
+2025-12-03 18:53:29.798 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#0[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[red]6.44s[/red], LP=[green]-0.000[/green], [dim]tok=379[/dim], [cyan]$0.000955[/cyan]
+2025-12-03 18:53:30.121 | WARNING  | llm_client.base:_retry_with_backoff:121 - LLM请求失败 (尝试 1/6): APIError: litellm.APIError: APIError: OpenrouterException - Cannot connect to host openrouter.ai:443 ssl:defau... 等待 5.0s 后重试
+2025-12-03 18:53:30.283 | DEBUG    | utils.logger:log_item_result:396 - [[red]✗[/red]] [blue]#58[/blue]: pred=[cyan]True[/cyan], exp=[yellow]False[/yellow], lat=[green]0.50s[/green], LP=[red]-0.201[/red], [dim]tok=195[/dim], [cyan]$0.000495[/cyan]
+2025-12-03 18:53:30.288 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#54[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[green]0.81s[/green], LP=[green]-0.000[/green], [dim]tok=182[/dim], [cyan]$0.000463[/cyan]
+2025-12-03 18:53:30.329 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#55[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[green]0.71s[/green], LP=[red]-0.201[/red], [dim]tok=825[/dim], [cyan]$0.002070[/cyan]
+2025-12-03 18:53:30.522 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#53[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[yellow]1.11s[/yellow], LP=[green]-0.004[/green], [dim]tok=282[/dim], [cyan]$0.000713[/cyan]
+2025-12-03 18:53:30.541 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#59[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.74s[/green], LP=[green]-0.000[/green], [dim]tok=198[/dim], [cyan]$0.000503[/cyan]
+2025-12-03 18:53:30.762 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#60[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[green]0.48s[/green], LP=[green]-0.000[/green], [dim]tok=267[/dim], [cyan]$0.000675[/cyan]
+2025-12-03 18:53:30.813 | WARNING  | llm_client.base:_retry_with_backoff:121 - LLM请求失败 (尝试 1/6): APIError: litellm.APIError: APIError: OpenrouterException - Cannot connect to host openrouter.ai:443 ssl:defau... 等待 5.0s 后重试
+2025-12-03 18:53:30.814 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#61[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[green]0.53s[/green], LP=[green]-0.000[/green], [dim]tok=154[/dim], [cyan]$0.000392[/cyan]
+2025-12-03 18:53:30.868 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#62[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[green]0.54s[/green], LP=[green]-0.000[/green], [dim]tok=252[/dim], [cyan]$0.000638[/cyan]
+2025-12-03 18:53:30.879 | WARNING  | llm_client.base:_retry_with_backoff:121 - LLM请求失败 (尝试 1/6): APIError: litellm.APIError: APIError: OpenrouterException - Cannot connect to host openrouter.ai:443 ssl:defau... 等待 5.0s 后重试
+2025-12-03 18:53:31.069 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#64[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.53s[/green], LP=[green]-0.000[/green], [dim]tok=160[/dim], [cyan]$0.000408[/cyan]
+2025-12-03 18:53:31.215 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#63[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.69s[/green], LP=[green]-0.000[/green], [dim]tok=225[/dim], [cyan]$0.000570[/cyan]
+2025-12-03 18:53:31.316 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#38[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[yellow]3.77s[/yellow], LP=[green]-0.000[/green], [dim]tok=331[/dim], [cyan]$0.000835[/cyan]
+2025-12-03 18:53:31.552 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#65[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.79s[/green], LP=[green]-0.000[/green], [dim]tok=175[/dim], [cyan]$0.000445[/cyan]
+2025-12-03 18:53:31.605 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#41[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[yellow]3.88s[/yellow], LP=[green]-0.000[/green], [dim]tok=257[/dim], [cyan]$0.000650[/cyan]
+2025-12-03 18:53:31.735 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#69[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.66s[/green], LP=[green]-0.000[/green], [dim]tok=291[/dim], [cyan]$0.000735[/cyan]
+2025-12-03 18:53:31.777 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#68[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[green]0.91s[/green], LP=[green]-0.000[/green], [dim]tok=232[/dim], [cyan]$0.000588[/cyan]
+2025-12-03 18:53:31.835 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#67[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[yellow]1.02s[/yellow], LP=[green]-0.000[/green], [dim]tok=147[/dim], [cyan]$0.000375[/cyan]
+2025-12-03 18:53:31.838 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#70[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.62s[/green], LP=[green]-0.000[/green], [dim]tok=185[/dim], [cyan]$0.000470[/cyan]
+2025-12-03 18:53:31.841 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#43[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[yellow]3.88s[/yellow], LP=[green]-0.000[/green], [dim]tok=157[/dim], [cyan]$0.000400[/cyan]
+2025-12-03 18:53:32.033 | WARNING  | llm_client.base:_retry_with_backoff:121 - LLM请求失败 (尝试 1/6): APIError: litellm.APIError: APIError: OpenrouterException - Cannot connect to host openrouter.ai:443 ssl:defau... 等待 5.0s 后重试
+2025-12-03 18:53:32.041 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#71[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.72s[/green], LP=[green]-0.000[/green], [dim]tok=255[/dim], [cyan]$0.000645[/cyan]
+2025-12-03 18:53:32.102 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#72[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[green]0.55s[/green], LP=[green]-0.000[/green], [dim]tok=244[/dim], [cyan]$0.000617[/cyan]
+2025-12-03 18:53:32.343 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#74[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.61s[/green], LP=[green]-0.000[/green], [dim]tok=191[/dim], [cyan]$0.000485[/cyan]
+2025-12-03 18:53:32.355 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#76[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[green]0.52s[/green], LP=[green]-0.000[/green], [dim]tok=240[/dim], [cyan]$0.000608[/cyan]
+2025-12-03 18:53:32.406 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#77[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[green]0.57s[/green], LP=[green]-0.000[/green], [dim]tok=166[/dim], [cyan]$0.000423[/cyan]
+2025-12-03 18:53:32.499 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#75[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.72s[/green], LP=[green]-0.000[/green], [dim]tok=243[/dim], [cyan]$0.000615[/cyan]
+2025-12-03 18:53:32.613 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#79[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[green]0.57s[/green], LP=[green]-0.000[/green], [dim]tok=189[/dim], [cyan]$0.000480[/cyan]
+2025-12-03 18:53:32.673 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#80[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[green]0.57s[/green], LP=[green]-0.000[/green], [dim]tok=163[/dim], [cyan]$0.000415[/cyan]
+2025-12-03 18:53:32.831 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#81[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.49s[/green], LP=[green]-0.000[/green], [dim]tok=209[/dim], [cyan]$0.000530[/cyan]
+2025-12-03 18:53:32.967 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#85[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.47s[/green], LP=[green]-0.000[/green], [dim]tok=320[/dim], [cyan]$0.000808[/cyan]
+2025-12-03 18:53:33.083 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#82[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[green]0.73s[/green], LP=[green]-0.000[/green], [dim]tok=314[/dim], [cyan]$0.000793[/cyan]
+2025-12-03 18:53:33.176 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#87[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.56s[/green], LP=[green]-0.000[/green], [dim]tok=177[/dim], [cyan]$0.000450[/cyan]
+2025-12-03 18:53:33.369 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#88[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.69s[/green], LP=[green]-0.000[/green], [dim]tok=150[/dim], [cyan]$0.000383[/cyan]
+2025-12-03 18:53:33.519 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#83[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[yellow]1.11s[/yellow], LP=[green]-0.079[/green], [dim]tok=291[/dim], [cyan]$0.000735[/cyan]
+2025-12-03 18:53:33.557 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#89[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.72s[/green], LP=[green]-0.000[/green], [dim]tok=226[/dim], [cyan]$0.000572[/cyan]
+2025-12-03 18:53:33.652 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#91[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.57s[/green], LP=[red]-0.201[/red], [dim]tok=234[/dim], [cyan]$0.000593[/cyan]
+2025-12-03 18:53:33.684 | WARNING  | llm_client.base:_retry_with_backoff:121 - LLM请求失败 (尝试 1/6): APIError: litellm.APIError: APIError: OpenrouterException - Cannot connect to host openrouter.ai:443 ssl:defau... 等待 5.0s 后重试
+2025-12-03 18:53:33.686 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#92[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.51s[/green], LP=[green]-0.000[/green], [dim]tok=179[/dim], [cyan]$0.000455[/cyan]
+2025-12-03 18:53:33.687 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#56[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[yellow]3.97s[/yellow], LP=[green]-0.000[/green], [dim]tok=243[/dim], [cyan]$0.000615[/cyan]
+2025-12-03 18:53:33.707 | WARNING  | llm_client.base:_retry_with_backoff:121 - LLM请求失败 (尝试 1/6): APIError: litellm.APIError: APIError: OpenrouterException - Cannot connect to host openrouter.ai:443 ssl:defau... 等待 5.0s 后重试
+2025-12-03 18:53:33.821 | WARNING  | llm_client.base:_retry_with_backoff:121 - LLM请求失败 (尝试 1/6): APIError: litellm.APIError: APIError: OpenrouterException - Cannot connect to host openrouter.ai:443 ssl:defau... 等待 5.0s 后重试
+2025-12-03 18:53:33.903 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#93[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.53s[/green], LP=[green]-0.000[/green], [dim]tok=172[/dim], [cyan]$0.000438[/cyan]
+2025-12-03 18:53:33.960 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#90[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.99s[/green], LP=[green]-0.000[/green], [dim]tok=212[/dim], [cyan]$0.000538[/cyan]
+2025-12-03 18:53:34.050 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#94[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.53s[/green], LP=[green]-0.000[/green], [dim]tok=136[/dim], [cyan]$0.000348[/cyan]
+2025-12-03 18:53:34.131 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#95[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[green]0.57s[/green], LP=[green]-0.000[/green], [dim]tok=156[/dim], [cyan]$0.000398[/cyan]
+2025-12-03 18:53:34.202 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#96[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.55s[/green], LP=[green]-0.000[/green], [dim]tok=209[/dim], [cyan]$0.000530[/cyan]
+2025-12-03 18:53:34.497 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#99[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[green]0.59s[/green], LP=[green]-0.000[/green], [dim]tok=333[/dim], [cyan]$0.000840[/cyan]
+2025-12-03 18:53:34.593 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#97[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.91s[/green], LP=[green]-0.000[/green], [dim]tok=280[/dim], [cyan]$0.000708[/cyan]
+2025-12-03 18:53:34.992 | WARNING  | llm_client.base:_retry_with_backoff:121 - LLM请求失败 (尝试 1/6): APIError: litellm.APIError: APIError: OpenrouterException - Cannot connect to host openrouter.ai:443 ssl:defau... 等待 5.0s 后重试
+2025-12-03 18:53:35.173 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#1[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.49s[/green], LP=[green]-0.000[/green], [dim]tok=366[/dim], [cyan]$0.000923[/cyan]
+2025-12-03 18:53:35.189 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#11[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[green]0.50s[/green], LP=[green]-0.000[/green], [dim]tok=222[/dim], [cyan]$0.000563[/cyan]
+2025-12-03 18:53:35.196 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#2[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.48s[/green], LP=[green]-0.000[/green], [dim]tok=176[/dim], [cyan]$0.000448[/cyan]
+2025-12-03 18:53:35.232 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#4[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.55s[/green], LP=[green]-0.000[/green], [dim]tok=213[/dim], [cyan]$0.000540[/cyan]
+2025-12-03 18:53:35.268 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#5[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[green]0.55s[/green], LP=[green]-0.000[/green], [dim]tok=198[/dim], [cyan]$0.000503[/cyan]
+2025-12-03 18:53:35.371 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#29[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.66s[/green], LP=[green]-0.000[/green], [dim]tok=231[/dim], [cyan]$0.000585[/cyan]
+2025-12-03 18:53:35.607 | WARNING  | llm_client.base:_retry_with_backoff:121 - LLM请求失败 (尝试 1/6): APIError: litellm.APIError: APIError: OpenrouterException - Cannot connect to host openrouter.ai:443 ssl:defau... 等待 5.0s 后重试
+2025-12-03 18:53:35.853 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#3[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.72s[/green], LP=[green]-0.000[/green], [dim]tok=227[/dim], [cyan]$0.000575[/cyan]
+2025-12-03 18:53:36.337 | WARNING  | llm_client.base:_retry_with_backoff:121 - LLM请求失败 (尝试 1/6): APIError: litellm.APIError: APIError: OpenrouterException - Cannot connect to host openrouter.ai:443 ssl:defau... 等待 5.0s 后重试
+2025-12-03 18:53:36.368 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#20[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[green]0.56s[/green], LP=[green]-0.000[/green], [dim]tok=287[/dim], [cyan]$0.000725[/cyan]
+2025-12-03 18:53:36.489 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#19[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.60s[/green], LP=[green]-0.000[/green], [dim]tok=176[/dim], [cyan]$0.000448[/cyan]
+2025-12-03 18:53:37.688 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#18[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.64s[/green], LP=[green]-0.004[/green], [dim]tok=276[/dim], [cyan]$0.000697[/cyan]
+2025-12-03 18:53:37.877 | WARNING  | llm_client.base:_retry_with_backoff:121 - LLM请求失败 (尝试 1/6): APIError: litellm.APIError: APIError: OpenrouterException - Cannot connect to host openrouter.ai:443 ssl:defau... 等待 5.0s 后重试
+2025-12-03 18:53:38.124 | WARNING  | llm_client.base:_retry_with_backoff:121 - LLM请求失败 (尝试 1/6): APIError: litellm.APIError: APIError: OpenrouterException - Cannot connect to host openrouter.ai:443 ssl:defau... 等待 5.0s 后重试
+2025-12-03 18:53:39.365 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#37[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.67s[/green], LP=[green]-0.000[/green], [dim]tok=277[/dim], [cyan]$0.000700[/cyan]
+2025-12-03 18:53:39.510 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#39[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[green]0.68s[/green], LP=[green]-0.000[/green], [dim]tok=153[/dim], [cyan]$0.000390[/cyan]
+2025-12-03 18:53:39.616 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#36[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[green]0.92s[/green], LP=[green]-0.000[/green], [dim]tok=228[/dim], [cyan]$0.000577[/cyan]
+2025-12-03 18:53:39.976 | WARNING  | llm_client.base:_retry_with_backoff:121 - LLM请求失败 (尝试 1/6): APIError: litellm.APIError: APIError: OpenrouterException - Cannot connect to host openrouter.ai:443 ssl:defau... 等待 5.0s 后重试
+2025-12-03 18:53:40.529 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#40[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.52s[/green], LP=[green]-0.000[/green], [dim]tok=371[/dim], [cyan]$0.000935[/cyan]
+2025-12-03 18:53:41.063 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#52[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[green]0.45s[/green], LP=[green]-0.000[/green], [dim]tok=302[/dim], [cyan]$0.000763[/cyan]
+2025-12-03 18:53:41.902 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#34[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.55s[/green], LP=[green]-0.000[/green], [dim]tok=219[/dim], [cyan]$0.000555[/cyan]
+2025-12-03 18:53:43.666 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#78[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[green]0.53s[/green], LP=[green]-0.000[/green], [dim]tok=283[/dim], [cyan]$0.000715[/cyan]
+2025-12-03 18:53:44.361 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#73[/blue]: pred=[cyan]True[/cyan], exp=[yellow]True[/yellow], lat=[yellow]1.48s[/yellow], LP=[green]-0.000[/green], [dim]tok=159[/dim], [cyan]$0.000405[/cyan]
+2025-12-03 18:53:45.540 | DEBUG    | utils.logger:log_item_result:396 - [[green]✓[/green]] [blue]#98[/blue]: pred=[cyan]False[/cyan], exp=[yellow]False[/yellow], lat=[green]0.55s[/green], LP=[green]-0.000[/green], [dim]tok=214[/dim], [cyan]$0.000543[/cyan]
+2025-12-03 18:53:45.543 | DEBUG    | utils.logger:stop:455 - 异步结果写入器已停止, 共写入 86 条记录
+2025-12-03 18:53:45.545 | INFO     | Summary - ============================================================
+2025-12-03 18:53:45.545 | INFO     | Summary - 评估结果总结
+2025-12-03 18:53:45.545 | INFO     | Summary - ============================================================
+2025-12-03 18:53:45.545 | INFO     | Summary - 模型: openrouter/openai/gpt-4o
+2025-12-03 18:53:45.545 | INFO     | Summary - Provider: litellm
+2025-12-03 18:53:45.545 | INFO     | Summary - 评估模式: answer (直接回答)
+2025-12-03 18:53:45.545 | INFO     | Summary - 风格: direct
+2025-12-03 18:53:45.545 | INFO     | Summary - 推理: False
+2025-12-03 18:53:45.545 | INFO     | Summary - ============================================================
+2025-12-03 18:53:45.545 | INFO     | Summary - 总样本数: 86
+2025-12-03 18:53:45.545 | INFO     | Summary - 有效解析: 86
+2025-12-03 18:53:45.545 | INFO     | Summary - 正确: 83
+2025-12-03 18:53:45.545 | INFO     | Summary - 错误: 3
+2025-12-03 18:53:45.545 | INFO     | Summary - 解析/API错误: 0
+2025-12-03 18:53:45.545 | INFO     | Summary - ============================================================
+2025-12-03 18:53:45.545 | INFO     | Summary - 准确率: 96.51%
+2025-12-03 18:53:45.545 | INFO     | Summary - ============================================================
+2025-12-03 18:53:45.545 | INFO     | Summary - Token统计:
+2025-12-03 18:53:45.545 | INFO     | Summary -   输入Token: 20,207
+2025-12-03 18:53:45.545 | INFO     | Summary -   输出Token: 86
+2025-12-03 18:53:45.545 | INFO     | Summary -   总Token: 20,293
+2025-12-03 18:53:45.545 | INFO     | Summary - ============================================================
+2025-12-03 18:53:45.545 | INFO     | Summary - 成本统计 (USD):
+2025-12-03 18:53:45.545 | INFO     | Summary -   输入成本: $0.050517
+2025-12-03 18:53:45.545 | INFO     | Summary -   输出成本: $0.000860
+2025-12-03 18:53:45.545 | INFO     | Summary -   总成本: $0.051378
+2025-12-03 18:53:45.545 | INFO     | Summary - ============================================================
+2025-12-03 18:53:45.545 | INFO     | Summary - LogProbs统计:
+2025-12-03 18:53:45.545 | INFO     | Summary -   平均LogProbs (全部): -0.0136
+2025-12-03 18:53:45.545 | INFO     | Summary -   平均LogProbs (正确): -0.0113
+2025-12-03 18:53:45.545 | INFO     | Summary -   平均LogProbs (错误): -0.0771
+2025-12-03 18:53:45.545 | INFO     | Summary - ============================================================
+2025-12-03 18:53:45.545 | INFO     | LogProbs分布 - === LogProbs分布 (全部) ===
+2025-12-03 18:53:45.552 | INFO     | LogProbs分布 - --- 描述性统计 ---
+2025-12-03 18:53:45.552 | INFO     | LogProbs分布 - 样本数: 86
+2025-12-03 18:53:45.552 | INFO     | LogProbs分布 - 平均值: -0.0136
+2025-12-03 18:53:45.552 | INFO     | LogProbs分布 - 中位数: -0.0000
+2025-12-03 18:53:45.552 | INFO     | LogProbs分布 - 标准差: 0.0557
+2025-12-03 18:53:45.552 | INFO     | LogProbs分布 - 最小值: -0.3869
+2025-12-03 18:53:45.552 | INFO     | LogProbs分布 - 最大值: -0.0000
+2025-12-03 18:53:45.552 | INFO     | LogProbs分布 - 
+2025-12-03 18:53:45.552 | INFO     | LogProbs分布 - --- 四分位数 ---
+2025-12-03 18:53:45.552 | INFO     | LogProbs分布 - 25%分位: -0.0000
+2025-12-03 18:53:45.552 | INFO     | LogProbs分布 - 50%分位: -0.0000
+2025-12-03 18:53:45.552 | INFO     | LogProbs分布 - 75%分位: -0.0000
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - --- 文本直方图 (分位数分箱) ---
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - --- (实际Bins: 15, 目标Bins: 15) ---
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - -----------------------------------------------------------------------------------------------------------------------------
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - Bin Range (15 Bins)               | Count | Bar
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - -----------------------------------------------------------------------------------------------------------------------------
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - [-0.3869, -0.04053400953610737) | 6     | ████████████████████████████████████████████████████████████████████
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - [-0.0405, -0.00015109811647562307) | 6     | ████████████████████████████████████████████████████████████████████
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - [-0.0002, -4.9186317482963204e-05) | 5     | █████████████████████████████████████████████████████████
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - [-0.0000, -2.3199920178740282e-05) | 6     | ████████████████████████████████████████████████████████████████████
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - [-0.0000, -1.2868935300502924e-05) | 6     | ████████████████████████████████████████████████████████████████████
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - [-0.0000, -9.014684110297821e-06) | 5     | █████████████████████████████████████████████████████████
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - [-0.0000, -6.829283241434794e-06) | 6     | ████████████████████████████████████████████████████████████████████
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - [-0.0000, -5.2399012323197285e-06) | 6     | ████████████████████████████████████████████████████████████████████
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - [-0.0000, -3.8889261304575484e-06) | 5     | █████████████████████████████████████████████████████████
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - [-0.0000, -3.2531733419697644e-06) | 6     | ████████████████████████████████████████████████████████████████████
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - [-0.0000, -2.5776860184123507e-06) | 5     | █████████████████████████████████████████████████████████
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - [-0.0000, -1.6240566083070007e-06) | 6     | ████████████████████████████████████████████████████████████████████
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - [-0.0000, -1.1472419600977446e-06) | 5     | █████████████████████████████████████████████████████████
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - [-0.0000, -9.088346359931165e-07) | 6     | ████████████████████████████████████████████████████████████████████
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - [-0.0000, -1.9361264946837764e-07) | 7     | ████████████████████████████████████████████████████████████████████████████████
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - -----------------------------------------------------------------------------------------------------------------------------
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - === LogProbs分布 (正确) ===
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - --- 描述性统计 ---
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - 样本数: 83
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - 平均值: -0.0113
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - 中位数: -0.0000
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - 标准差: 0.0527
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - 最小值: -0.3869
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - 最大值: -0.0000
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - 
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - --- 四分位数 ---
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - 25%分位: -0.0000
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - 50%分位: -0.0000
+2025-12-03 18:53:45.553 | INFO     | LogProbs分布 - 75%分位: -0.0000
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - --- 文本直方图 (分位数分箱) ---
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - --- (实际Bins: 15, 目标Bins: 15) ---
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - -----------------------------------------------------------------------------------------------------------------------------
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - Bin Range (15 Bins)               | Count | Bar
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - -----------------------------------------------------------------------------------------------------------------------------
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - [-0.3869, -0.004087549820542336) | 6     | ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - [-0.0041, -9.887835234015558e-05) | 5     | ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - [-0.0001, -3.91732100979425e-05) | 6     | ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - [-0.0000, -2.2023777516248324e-05) | 5     | ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - [-0.0000, -1.2074244295945388e-05) | 6     | ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - [-0.0000, -9.014684110297821e-06) | 4     | ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - [-0.0000, -6.392202976712724e-06) | 6     | ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - [-0.0000, -5.080963092041202e-06) | 5     | ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - [-0.0000, -3.8889261304575484e-06) | 5     | ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - [-0.0000, -3.094235201691238e-06) | 7     | ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - [-0.0000, -2.561792174068007e-06) | 6     | ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - [-0.0000, -1.6240566083070007e-06) | 4     | ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - [-0.0000, -1.1392950530838188e-06) | 7     | ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - [-0.0000, -9.088346359931165e-07) | 4     | ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - [-0.0000, -1.9361264946837764e-07) | 7     | ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - -----------------------------------------------------------------------------------------------------------------------------
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - === LogProbs分布 (错误) ===
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - --- 描述性统计 ---
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - 样本数: 3
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - 平均值: -0.0771
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - 中位数: -0.0298
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - 标准差: 0.0888
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - 最小值: -0.2014
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - 最大值: -0.0000
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - 
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - --- 四分位数 ---
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - 25%分位: -0.1156
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - 50%分位: -0.0298
+2025-12-03 18:53:45.554 | INFO     | LogProbs分布 - 75%分位: -0.0149
+2025-12-03 18:53:45.555 | INFO     | LogProbs分布 - --- 文本直方图 (分位数分箱) ---
+2025-12-03 18:53:45.555 | INFO     | LogProbs分布 - --- (实际Bins: 15, 目标Bins: 15) ---
+2025-12-03 18:53:45.555 | INFO     | LogProbs分布 - -----------------------------------------------------------------------------------------------------------------------------
+2025-12-03 18:53:45.555 | INFO     | LogProbs分布 - Bin Range (15 Bins)               | Count | Bar
+2025-12-03 18:53:45.555 | INFO     | LogProbs分布 - -----------------------------------------------------------------------------------------------------------------------------
+2025-12-03 18:53:45.555 | INFO     | LogProbs分布 - [-0.2014, -0.1785358098646005) | 1     | ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+2025-12-03 18:53:45.555 | INFO     | LogProbs分布 - [-0.1785, -0.1556533987323443) | 0     | 
+2025-12-03 18:53:45.555 | INFO     | LogProbs分布 - [-0.1557, -0.1327709876000881) | 0     | 
+2025-12-03 18:53:45.555 | INFO     | LogProbs分布 - [-0.1328, -0.10988857646783193) | 0     | 
+2025-12-03 18:53:45.555 | INFO     | LogProbs分布 - [-0.1099, -0.08700616533557573) | 0     | 
+2025-12-03 18:53:45.555 | INFO     | LogProbs分布 - [-0.0870, -0.06412375420331953) | 0     | 
+2025-12-03 18:53:45.555 | INFO     | LogProbs分布 - [-0.0641, -0.041241343071063336) | 0     | 
+2025-12-03 18:53:45.555 | INFO     | LogProbs分布 - [-0.0412, -0.0278140626502136) | 1     | ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+2025-12-03 18:53:45.555 | INFO     | LogProbs分布 - [-0.0278, -0.023841912940770274) | 0     | 
+2025-12-03 18:53:45.555 | INFO     | LogProbs分布 - [-0.0238, -0.019869763231326935) | 0     | 
+2025-12-03 18:53:45.555 | INFO     | LogProbs分布 - [-0.0199, -0.01589761352188361) | 0     | 
+2025-12-03 18:53:45.555 | INFO     | LogProbs分布 - [-0.0159, -0.011925463812440282) | 0     | 
+2025-12-03 18:53:45.555 | INFO     | LogProbs分布 - [-0.0119, -0.007953314102996954) | 0     | 
+2025-12-03 18:53:45.555 | INFO     | LogProbs分布 - [-0.0080, -0.003981164393553619) | 0     | 
+2025-12-03 18:53:45.555 | INFO     | LogProbs分布 - [-0.0040, -9.014684110297821e-06) | 1     | ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+2025-12-03 18:53:45.555 | INFO     | LogProbs分布 - -----------------------------------------------------------------------------------------------------------------------------

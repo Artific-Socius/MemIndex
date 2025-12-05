@@ -1,0 +1,11 @@
+{
+    "abs_path": "C:\\Users\\leizi\\project\\MemIndex\\MemIndex\\data\\reports\\[report]-1k_json-mem0-openrouter_qwen_qwen3-235b-a22b-2507-binary.json",
+    "folder": "C:\\Users\\leizi\\project\\MemIndex\\MemIndex\\data\\reports\\1k_json-mem0-openrouter_qwen_qwen3-235b-a22b-2507-binary",
+    "current_benchmarks": [
+        "benchmark-result-[0]-2025-12-05T08_52_28.508324.json"
+    ],
+    "create_time": "2025-12-05T08:52:28.508324",
+    "update_time": "2025-12-05T08:52:28.512326",
+    "agent": "mem0",
+    "model": "qwen3-235b-a22b-2507"
+}

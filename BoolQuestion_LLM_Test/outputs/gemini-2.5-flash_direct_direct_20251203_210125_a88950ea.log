@@ -1,0 +1,5 @@
+2025-12-03 21:01:25.594 | INFO     | utils.logger:__init__:260 - 实验日志初始化完成
+2025-12-03 21:01:25.595 | INFO     | utils.logger:__init__:261 - 日志文件: outputs\gemini-2.5-flash_direct_direct_20251203_210125_a88950ea.log
+2025-12-03 21:01:25.595 | INFO     | utils.logger:__init__:262 - 数据文件: outputs\gemini-2.5-flash_direct_direct_20251203_210125_a88950ea.jsonl
+2025-12-03 21:01:25.598 | DEBUG    | prompt_manager.prompt_manager:_load_yaml:70 - 已加载Prompt配置: C:\Users\leizi\project\MemIndex\BoolQuestion_LLM_Test\prompt_manager\prompts.yaml
+2025-12-03 21:01:25.598 | DEBUG    | prompt_manager.prompt_manager:__init__:57 - PromptManager初始化: mode=answer, style=direct, reasoning=False, order=reason-after
