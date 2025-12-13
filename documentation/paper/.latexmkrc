@@ -15,6 +15,10 @@ $dvi_mode = 0;
 $pdflatex = 'pdflatex -synctex=1 -interaction=nonstopmode -file-line-error -output-directory=build %O %S';
 # 保留 XeLaTeX 设置以备需要时使用
 $xelatex = 'xelatex -synctex=1 -interaction=nonstopmode -file-line-error -output-directory=build %O %S';
+# BibTeX 设置 - 配置搜索路径，从 paper 根目录查找 bib 文件
+# 在 build 目录中运行 BibTeX，但设置 BIBINPUTS 指向父目录
+# 确保 build 目录存在，然后运行 BibTeX
+$bibtex = 'mkdir -p build && cd build && BIBINPUTS=..:../Chapter/Reference: bibtex %O %R || (test -f %R.bbl && exit 0 || exit 1)';
 $pdf_previewer = 'start';
 
 # 清理设置
