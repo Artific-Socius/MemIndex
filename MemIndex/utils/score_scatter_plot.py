@@ -847,8 +847,8 @@ def plot_config_scatter(
     config: ConfigInfo,
     reports_by_prompt: dict[str, ReportInfo],
     output_file: str,
-    figsize: tuple[int, int] = (32, 18),
-    dpi: int = 300,
+    figsize: tuple[int, int] = (28, 16),
+    dpi: int = 180,
     title_suffix: str = "",
     layout: str = "merge",
 ) -> dict:
