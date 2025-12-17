@@ -1,19 +1,22 @@
 # 技术解释需求
 
-解释什么是LLM what is LLM
+解释什么是 LLM what is LLM
 
-解释什么是LLM的API
+解释什么是LLM的API what is API for LLM
 
-解释什么是LLM的Logprobs
+解释什么是LLM的Logprobs what is Logprobs for LLM 
 
-解释什么是SHA256散列
+解释什么是SHA256散列  What is SHA-256 Hashing?
 
-本文中对于提到的Agent的定义
+本文中对于提到的Agent的定义 
 
 # Methodology & Framework
 
 本文提出了一种标准化的评估框架，旨在解决大语言模型（LLM）在长上下文记忆与检索任务中评估标准不统一、主观性强以及复现难的问题。不同于传统的基于Likert量表（如1-5分打分）的评估方法，本框架采用**二元逻辑校验（Binary Logical Verification）**作为核心评估范式，并辅以**概率置信度（Probabilistic Confidence）**分析，构建了一个客观、严谨且可量化的基准测试体系。
 
+This paper proposes a standardized evaluation framework designed to address the challenges of inconsistent criteria, high subjectivity, and poor reproducibility in assessing Large Language Models (LLMs) for long-context memory and retrieval tasks.
+
+The proposed framework deviates from conventional evaluation methods based on Likert scales (1-5 scoring) by adopting Binary Logical Verification as its core assessment paradigm. This is supplemented by Probabilistic Confidence analysis, thereby establishing an objective, rigorous, and quantifiable benchmark system.
 ## Binary LLM as a Judge (二元判决机制)
 
 在复杂的长文本问答与Agent记忆评估中，"好"与"坏"的界限往往是模糊的，但"真"与"假"的逻辑蕴含关系是确定的。我们将评估任务形式化为一个三元组 $(C, Q, A)$ 的二元分类问题，其中 $C$ 为上下文记忆（Context/Ground Truth），$Q$ 为查询（Question），$A$ 为待评估的回答（Answer）。裁判模型（Judge LLM）需判定 $A$ 是否在逻辑上严格蕴含于 $C$ 针对 $Q$ 的事实描述中：
@@ -23,6 +26,15 @@ f_{judge}(C, Q, A) \in \{\text{True}, \text{False}\}
 $$
 
 这种**Binary LLM as a Judge**的方法强迫模型放弃模棱两可的中间分数（如"3分"或"4分"），消除了中心趋势偏差（Central Tendency Bias），显著提升了评估结果的一致性（Consistency）和客观性（Objectivity）。任何事实性错误或幻觉在严格的二元视角下都将被判定为False，从而保证了评估的高标准。
+
+In complex long-text question answering and Agent memory evaluation, the boundary between "good" and "bad" is often ambiguous, yet the logical implication relationship between "true" and "false" remains deterministic.We formalize the evaluation task as a binary classification problem defined by a triplet $(C, Q, A)$, where $C$ represents the Context/Ground Truth (context memory), $Q$ is the Query (question), and $A$ is the Answer to be evaluated.The Judge LLM is required to determine whether $A$ is strictly and logically implied by the factual description in $C$ corresponding to $Q$:
+
+$$
+f_{judge}(C, Q, A) \in \{\text{True}, \text{False}\}
+$$
+
+
+This Binary LLM as a Judge approach compels the model to abandon ambiguous intermediate scores (such as "3 points" or "4 points"), thereby eliminating the Central Tendency Bias and significantly enhancing the Consistency and Objectivity of the evaluation results. Any factual error or hallucination will be judged as False under this strict binary perspective, thus ensuring a high standard of assessment.
 
 ## Logprobs-based Confidence Metric (基于对数概率的置信度度量)
 
@@ -36,6 +48,16 @@ $$
 
 进而计算置信度分数 $Confidence = e^{\bar{p}}$。这一指标为二元结果增加了一个连续的置信维度，使我们能够区分“确信的正确”与“犹豫的正确”。通过设置置信度阈值 $t$，我们可以过滤低置信度的判决，从而在准确率（Accuracy）和覆盖率（Coverage）之间寻找最佳平衡点，实现对裁判模型本身可靠性的元评估（Meta-Evaluation）。
 
+To address the limitations in granularity of binary classification, and to investigate the certainty of model judgements during the validation of foundational capabilities in Phase One, a confidence metric was introduced that was based on model output log-probabilities in the BoolQ validation experiment (the purpose of this metric is primarily to validate the reliability boundaries of the Judge LLM itself, and it was not directly applied to the scoring system of the MemIndex Benchmark).
+
+For each decision rendered by the adjudicative model, two things are recorded: its textual output and the average log probability of generated tokens.
+
+$$
+\bar{p} = \frac{1}{N} \sum_{i=1}^{N} \log P(t_i | t_{<i}, \text{context})
+$$
+
+Then calculate the confidence score $Confidence = e^{\bar{p}}$.This metric introduces a continuous confidence dimension to the binary result, enabling us to distinguish between "confidently correct" and "tentatively correct" judgments.By setting a confidence threshold $t$, we can filter out low-confidence judgments, thereby finding the optimal balance point between Accuracy and Coverage, thus achieving a Meta-Evaluation of the Judge model's inherent reliability.
+
 ## Strict Output Enforcement Protocols (严格输出约束协议)
 
 为了确保裁判模型输出的机器可读性与稳定性，框架定义了三种标准化的交互协议，以适应不同的模型能力与应用场景：
@@ -45,6 +67,14 @@ $$
 3.  **JSON Mode (结构化模式)**: 强制完整的JSON对象输出，适用于需要程序化解析复杂推理逻辑或与其他自动化系统集成的场景。
 
 这三种模式共同构成了框架的接口层，通过Prompt工程严格约束输出空间，将自然语言生成的评估任务转化为了一种准确定性的分类任务。
+
+In order to guarantee the machine readability and stability of the model's outputs, the framework delineates three standardised interaction protocols, with the objective of accommodating varying model capabilities and application scenarios.
+
+1.  **Direct Mode **: The model is compelled to produce solely the words 'true' or 'false'. This mode has been engineered to maximally suppress autoregressive interference from Chain of Thought (CoT) reasoning, rendering it suitable for large-scale validation scenarios requiring extremely high throughput and low latency.
+2.  **SSE Mode **: The data is arranged in a row-based key:value format, for example, 'reason: ... answer: ...'. This approach maintains the interpretability of the reasoning process while supporting streaming parsing, facilitating real-time monitoring and evaluation of the logic.
+3.  **JSON Mode **: The implementation of complete JSON object output is enforced, rendering it suitable for scenarios necessitating programmatic parsing of complex reasoning logic or integration with other automated systems.
+
+The aforementioned three modes collectively constitute the framework's interface layer. By means of a strict constraint on the output space through prompt engineering, the transformation of natural language-generated evaluation tasks into quasi-deterministic classification tasks is achieved.
 
 # Experiments
 ## BoolQ二元分类实验
