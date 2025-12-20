@@ -1,0 +1,175 @@
+\subsection{MemIndex Benchmark Experiment}
+The MemIndex Benchmark is an enhanced evaluation framework for assessing the memory capabilities of Large Language Models, built upon and refined from the original LTM Benchmark [ref].
+
+\subsubsection{Experimental Setup}
+
+The present experiment is an evaluation of the memory performance of standard LLMs and Long-term Memory (LTM)-enhanced Agents through a series of complex operational workflows. The configuration of the benchmark pipeline is delineated as such:
+
+\begin{enumerate}
+\item Multi- lendemic dialogue: The target Agent engages in sequential dialogues across multiple predefined evaluation subsets.
+
+\item Memory Span Stress Testing [ref\_ltm]: A fixed Memory Span is maintained, ensuring that a substantial volume of "noise" (distractor dialogue) is inserted between the critical data points and the query. This is designed to rigorously challenge the model's long-term retrieval and retention capabilities.
+
+\item Judgement-based Evaluation: Queries are presented to the Agent, and the responses are evaluated by an LLM Judge against the ground truth labels provided in the dataset.
+
+\item Evaluation Paradigms: The assessment is conducted using two distinct methods: The primary method employed is binary classification, with score generation serving as a comparative baseline.
+\end{enumerate}
+
+\paragraph{Dataset Reconstruction}
+
+The dataset under consideration is derived from the GoodAI LTM Benchmark [ref]. A comprehensive architectural system has been implemented for the purpose of reconstructing the original data. A dedicated Markup Language was developed for the purpose of facilitating rapid dataset editing. This Markup Language is subsequently processed by the proprietary Dataset Compiler to generate the final JSON-formatted evaluation sets.
+
+In comparison with the original GoodAI LTM Benchmark, specific optimisations and adjustments have been introduced to the data distribution, rendering it more robust and suitable for stress-testing the memory architectures of contemporary LLMs.
+
+\paragraph{Evaluation Metrics}
+Whilst the initial GoodAI LTM Benchmark employed binary LLM-as-a-Judge for specific sub-tests, a significant proportion of its evaluations relied on direct score generation or text-comparison algorithms (e.g. string matching). In the MemIndex Benchmark, all evaluation criteria have been reworked into a standardised Binary LLM-as-a-Judge framework with the objective of maximising assessment stability and consistency. In order to provide a comprehensive analysis, support is also maintained for Score Generation LLM-as-a-Judge as a secondary comparative metric.
+
+\subparagraph{Binary LLM-as-a-Judge (Primary Metric)}
+This is the evaluation paradigm that is recommended as a matter of course. In this mode, the evaluator model assesses the target response against the ground-truth to determine its correctness, outputting a boolean value. The evaluation prompt imposes a structure on the LLM, compelling it to generate a JSON-formatted response. The structure is delineated as follows:
+$$
+\{\text{"reason": string, "answer": boolean}\}
+$$
+The reason field captures the qualitative justification for the judgment, while the answer field contains the definitive assessment. The scoring logic is defined as:
+$$
+s_i = \begin{cases} s_{max} & \text{if answer} = true \\ 0 & \text{if answer} = false \end{cases}
+$$
+where $s_i$ denotes the score for the $i$-th evaluation item and $s_{max}$ represents its maximum point value. This binary design effectively mitigates the subjectivity and instability inherent in LLMs when generating continuous numerical scores, thereby ensuring significantly higher reproducibility of the evaluation results.
+
+\subparagraph{Score Generation LLM as Judge (Comparative Baseline)}
+
+As a comparative baseline, we simultaneously implemented a continuous scoring evaluation mode. In this paradigm, the evaluator model is required to assign a continuous value between 0 and 1. The output format is defined as follows:
+$$
+\{\text{"reason": string, "score": float}\}
+$$
+where $score \in [0, 1]$. The final score is calculated via linear scaling:
+$$
+s_i = score_i \times s_{max}
+$$
+While this evaluation method provides greater granularity and can reflect partial correctness in the model's responses, it inherently introduces higher levels of subjectivity and stochasticity into the assessment process.
+
+\subparagraph{Weighted Binary Evaluation}
+
+In scenarios involving complex question-answering (QA) that necessitate the evaluation of numerous independent sub-objectives, a Weighted Binary Evaluation mechanism has been implemented. Each scoring entry comprises three primary fields: a unique identifier (key), a relative significance factor (weight), and the ground-truth (answer). The system performs an independent binary assessment for each sub-item and computes the aggregate score through weighted summation:
+$$
+s_{total} = \frac{\sum_{j=1}^{M} w_j \cdot \mathbb{1}[result_j = true]}{\sum_{j=1}^{M} w_j} \times s_{max}
+$$
+where $M$ denotes the total number of scoring sub-items, $w_j$ represents the weight assigned to the $j$-th item, and $\mathbb{1}[\cdot]$ is the indicator function.This design supports multi-dimensional evaluation of complex responses while preserving the inherent stability of the binary assessment paradigm. It effectively bridges the gap between simple boolean judgments and the need for granular performance metrics.
+
+\subparagraph{Evaluator Model Configuration}
+
+In order to guarantee strict consistency and reproducibility of the evaluation process, rigorous parametric controls were applied to the evaluator models. The specific configurations are as follows:
+$$
+temperature = 0, \quad top\_p = 1.0, \quad top\_k = 0, \quad seed = 42
+$$
+The combination of $temperature = 0$ and $top\_k = 0$ necessitates the implementation of Greedy Decoding, thereby effectively eliminating the stochasticity introduced by sampling and its subsequent impact on evaluation outcomes. Furthermore, the application of a fixed random seed ensures output invariance across identical inputs.
+
+\subparagraph{Evaluation Prompt Design}
+The development of a configurable evaluation prompting system was undertaken, supporting three distinct evaluation styles: The three categories are termed 'Default', 'Strict' and 'Lenient'. Each style provides specialised prompt templates, which are tailored for both binary and score-generation modes. The Default Binary Evaluation prompt is used as a case study.
+\begin{verbatim}
+You are an answer evaluation model. Your task is to assess whether the target response 
+provided in <target> is correct based on the standard answer or evaluation criteria 
+defined in <ground-truth>. 
+You must return the evaluation result in JSON format, including a "reason" field that 
+explains which aspects of the target meet or fail the requirements.
+\end{verbatim}
+In order to guarantee that the evaluator model accurately identifies the task, it is imperative that all prompts employ a uniform data formatting template. The template under consideration employs a YAML-based configuration structure that clearly segregates the question, ground-truth, and target response. This approach is intended to minimise potential semantic ambiguity during the assessment process.
+
+\subsubsection{Implementation Details}
+
+The MemIndex Benchmark framework has been developed using Python, with the\texttt{asyncio}asynchronous programming model being leveraged in order to support high-concurrency test execution. The system architecture is founded on the principles of modularity and extensibility, and consists of the following core subsystems:
+
+\paragraph{1. Core Concepts \& Entity Definitions}
+In order to establish clear experimental boundaries and specify the objects of evaluation, rigorous definitions are provided for the key entities within the system.
+
+\begin{itemize}
+\item \textbf{Chat Model}：This term refers to the underlying Large Language Model (e.g., GPT-4o, Claude-3.5-Sonnet) that is utilised by the system. In the present experiments, the text generator is treated as a stateless one with a finite context window. The responsibility of the system is strictly limited to generating coherent responses based on the provided short-term context, without performing long-term memory functions across sessions.
+\item \textbf{Memory System}：This term is used to denote the external memory solution under evaluation (e.g., Mem0, Memecho). \textbf{The Subject under Test} is the primary focus of this study. The core functions of the system include the storage, indexing and retrieval of information across dialogue cycles. The aim of this is to overcome the context limitations of the Chat Model by providing persistent knowledge support.
+\item \textbf{Eval Model}：An independent LLM (selected from models with the most stable inference, such as Gemini-1.5-Flash) is designated for automated scoring. The system functions as the "judge", conducting binary or scalar evaluations of the Chat Model's output in accordance with predefined Ground Truth. The Eval Model is physically isolated from the Chat Model during runtime in order to ensure the objectivity and independence of the evaluation process.
+\item \textbf{Agent}：The present study investigates the runtime integration and encapsulation of the Chat Model and the Memory System. The entity in question functions as the direct interaction component of the benchmark, coordinating the processes of short-term generation with those of long-term retrieval. Externally, it assumes the role of a conversational assistant, endowed with memory capabilities.
+\item \textbf{User Simulator}：The Benchmark framework itself. The system has been developed to simulate user queries, information statements, and distractor behaviours (Nonsense Injection) according to predefined test scripts (Datasets), thereby driving the experimental workflow.
+\end{itemize}
+
+\paragraph{2. Hierarchical Scheduling Architecture}
+
+The execution engine implements a two-tier scheduling strategy, comprising a \textbf{Runner} and an \textbf{Actuator}, to facilitate sophisticated dialogue flow control:
+\begin{itemize}
+\item \textbf{Global Scheduler (Runner)}: The Runner is responsible for coordinating the interleaved execution of multiple concurrent test sequences. The function of the global dialogue flow maintenance and the management of the \textbf{memory distance} is thus fulfilled. In order to simulate authentic long-term memory scenarios, the Runner injects \textbf{Nonsense Filler} between critical interactions and utilises a \textbf{Frozen Area} mechanism to suspend tasks that have not yet reached the required memory distance. The scheduling logic is formally defined as follows:
+$$
+  Queue_{active} = \{ A_i \mid \text{tokens}(A_i) \geq D_{target} \times P(A_i) \}
+  $$
+  where $A_i$ denotes the $i$-th actuator, $D_{target}$ represents the target memory distance, and $P(A_i)$ is the current progress ratio of the actuator.
+
+\item \textbf{Task Executor - Actuator}：Each evaluation subset (e.g., Color Memory) is managed by an independent actuator instance. The Actuator is responsible for maintaining a finite state machine (FSM) for its specific sub-task, handling \textbf{dependency injection} between operational steps, executing retry strategies, and managing the local view of the dialogue history.
+\end{itemize}
+
+\paragraph{3. Modular Agent Framework}
+
+In order to achieve highly decoupled evaluation, a layered architecture was designed that isolated the \textbf{Agent}, \textbf{Memory}, and \textbf{Chat} components, thereby enabling flexible combinations through the use of standardised interfaces.
+
+\begin{itemize}
+\item \textbf{Control Plane (Agent)}:The Agent, in its capacity as the orchestrator ( \texttt{Mem0Agent}), facilitates the coordination of long-term memory with short-term interactions. The interaction cycle is managed through a pipeline of \textbf{intent recognition}, \textbf{semantic retrieval}, \textbf{context augmentation}, and \textbf{closed-loop feedback}, with no direct handling of storage or text generation.
+\item \textbf{Storage Backend(Memory)}：The Memory component is responsible for the management of the lifecycle of long-term information and provides standard CRUD interfaces. By abstracting the underlying storage technologies (e.g. vector databases or specialised LTM solutions) and externalising long-term memory, it bypasses the constraints of the LLM's fixed context window.
+\item \textbf{Generation Engine (Chat)}：The Chat component is responsible for the management of the LLM's short-term context window and the generation of text. It is notable that the system under discussion maintains an \textbf{ephemeral buffer} for the current session, and employs sliding window or automated truncation strategies to strictly regulate token consumption.
+\end{itemize}
+
+\textbf{Synergy Mechanism}:The three components collaborate dynamically via the \textbf{Retrieve-Augment-Generate (RAG)}paradigm. Memory provides knowledge that extends beyond the window limit, Chat extends the immediate breadth of conversation, and the Agent ensures efficient scheduling of the data flow.
+
+\paragraph{3. Context Suppression \& Isolation Verification}
+
+MemIndex has been engineered to quantitatively measure the efficacy of external memory systems rather than the inherent In-Context Learning (ICL) capabilities of the LLM itself. In order to mitigate the confounding effects of the LLM's native short-term memory on experimental outcomes, the framework implements a rigorous \textbf{Context Suppression} mechanism, ensuring the purity of the evaluation environment.
+
+\begin{enumerate}
+\item \textbf{Memory Distance Injection}:The Runner stipulates the injection of irrelevant Nonsense Filler between the Encoding phase (where key information is introduced) and the Retrieval phase (where the query occurs). The cumulative token volume of this filler is engineered to strictly exceed the predefined context window threshold of the Chat model.
+\item \textbf{Forced Sequential Eviction}: The Chat component implements a rigorous FIFO (First-In-First-Out) sliding window policy. As the nonsense filler accumulates, historical segments containing the original critical interactions are physically evicted from the LLM's active context window.
+\item \textbf{Causal Attribution Verification}:
+
+$$
+    L_{interval} > L_{context\_window} \implies P(Info_{target} \in Context_{LLM}) \to 0
+    $$
+In such conditions, the Chat LLM is placed in a functional "information vacuum," where its native In-Context Learning (ICL) capabilities are rendered insufficient for accessing the target information. Consequently, any accurate response generated by the Agent must be causally attributed to the \textbf{Active Retrieval and Re-injection} mechanism of the Memory component.
+\end{enumerate}
+
+This design effectively prevents external memory solutions from "free-riding" on the LLM's residual context. By enforcing this isolation, the benchmark ensures that the resulting test scores accurately reflect the independent contribution and true retrieval efficacy of the memory system.
+
+\paragraph{4. 动态执行与评估 (Dynamic Execution \& Evaluation):}
+The framework has been developed to accommodate high-complexity interaction scenarios by supporting the following advanced execution mechanisms:
+
+\begin{itemize}
+\item \textbf{Dependency Injection}:  The mechanism under discussion here is one which enforces logical dependencies across execution steps. One such example of this would be the runtime resolution of reference variables (e.g. \texttt{\{1\}}). This approach ensures that subsequent interactions are dynamically grounded in the specific outputs of preceding stages, thereby allowing for the simulation of complex, multi-stage reasoning tasks.
+
+\item \textbf{Lazy Evaluation}: In order to observe long-term cognitive effects, the framework supports delayed scoring. In the event of a delay of $L$ rounds being specified, the evaluation is triggered at $t_{eval} = t_{current} + L$. This approach is specifically designed to assess memory retention and retrieval stability following the introduction of sustained distractors, thereby distinguishing robust long-term indexing from transient caching.
+\end{itemize}
+
+\paragraph{5. Analytics \& Visualization Suite}
+In order to facilitate a profound interpretation of experimental data, a comprehensive suite of analytical tools was developed:
+\begin{itemize}
+\item \textbf{Interactive Report Viewer}:The present invention comprises a web-based interface that is powered by Gradio for the purpose of visual rendering of JSONL report files. The software under discussion features \textbf{textual difference highlighting} and supports the visual tracing of \textbf{weighted binary scoring} logic and citation chains. This, the software's developers claim, results in the streamlining of micro-level error analysis and diagnostic auditing.
+\item \textbf{Multi-dimensional Statistical Plotting}:The toolkit is a macro-analysis toolkit built on Matplotlib. The software facilitates the generation of scatter plots and box plots, incorporating \textbf{DBSCAN clustering} to discern underlying patterns in score distributions. In order to mitigate data occlusion in high-density regions, \textbf{overlapping point visualisation techniques} (e.g. concentric ring markers or pie-chart glyphs) were implemented in order to represent coincident data points with clarity.
+\end{itemize}
+
+\subsubsection{Main Results}
+
+[这里需要插入多张布局后的图片]
+
+In order to rigorously quantify the reliability of the LLM-as-a-Judge paradigm, a systematic comparative analysis was performed between the \textbf{Binary Evaluation} and \textbf{Score Generation} . The \textbf{DBSCAN (Density-Based Spatial Clustering of Applications with Noise)} algorithm was employed to model the scoring distributions produced under three distinct prompt variants (\textit{Default}, \textit{Strict}, and \textit{Lenient}). Furthermore, the mean number of cluster centres ($K$) was introduced as a quantitative metric to evaluate Prompt Sensitivity.
+
+\paragraph{1. Robustness \& Topological Consistency Analysis}
+The experimental data demonstrate significant disparities in stability between the two evaluation paradigms. The analysis of the scoring distributions (i.e. scatter plots) of models such as Gemini-1.5-Flash reveals distinct topological characteristics.
+\begin{itemize}
+\item \textbf{Topological Invariance of Binary Protocol}：
+The binary evaluation demonstrates exceptional distributional stability. The data points demonstrate a strict \textbf{bimodal distribution}, with the majority of samples converging towards Boolean extrema of $\{0.0, 1.0\}$ , respectively. The most compelling evidence lies in the high frequency of numerically indexed data points (e.g., $[16/16/16]$) in the plots, representing a perfect overlap of evaluative outcomes across the three distinct prompting styles. Quantitative analysis indicates that the binary mode yields a mean cluster centre count$K \approx 1.0$, with the Intraclass Correlation Coefficient (\textbf{ICC}) consistently remaining high (ICC > 0.8). This finding indicates that, irrespective of semantic perturbations in the prompt, the model's decision boundary remains stable, demonstrating remarkable resilience against prompt engineering manipulations.
+
+\item \textbf{Distributional Divergence in Scalar Scoring}：
+In contrast, the Score mode displays characteristics of a \textbf{random walk}. Scatter plots illustrate a diffused distribution across the $(0, 1)$ interval, with a considerably reduced number of overlapping points. Statistical data demonstrate a marked increase in $K$ values (fluctuating between $1.4$ and $1.6$ for \texttt{Gemini-2.5-Flash} ), indicating that different prompts caused the model to produce fragmented scoring standards. For instance, in the \texttt{restaurant} sub-task, the same response might elicit scores swinging from $0.2$ to $0.8$ depending on the prompt. This high-order characteristic indicates that continuous scoring mechanisms are devoid of objective \textbf{semantic anchors} and are highly susceptible to contextual noise.
+\end{itemize}
+
+\paragraph{2. Cognitive Bias \& Calibration Deficit}
+A more thorough investigation of the Score mode distributions reveals systemic biases that compromise the evaluative validity of the system.
+\begin{itemize}
+\item \textbf{Central Tendency Bias}： Probability distribution analysis demonstrates that scores in the continuous mode are substantially skewed towards median values (e.g., $0.5, 0.6$). This phenomenon can be interpreted as a "safe middle-ground" strategy adopted by LLMs when confronted with \textbf{epistemic uncertainty} in memory retrieval, whereby they demonstrate a preference for ambiguous intermediate scores over decisive penalties. This mechanism gives rise to systemic \textbf{score inflation}, thus enabling agents that produce hallucinations or vague answers to retain respectable scores, thereby masking critical failures in precise memory retrieval.
+\item \textbf{Lack of Ontological Calibration}： In contradistinction to binary classification, which is characterised by definitive truth conditions, continuous scores in this context are devoid of a rigorous ontological foundation; the semantic distinction between a $0.7$ and a $0.8$ score remains undefined. A multitude of outliers between $0$ and $1$ is evident in the distributions observed from models such as \texttt{Qwen} and \texttt{Grok} . This definitional ambiguity introduces an irreducible \textbf{aleatoric uncertainty}, rendering fine-grained score comparisons statistically insignificant and reducing the discriminative power of the benchmark.
+\end{itemize}
+
+\paragraph{3. Conclusion: Establishing Weighted Binary Evaluation as the Benchmark Standard}
+
+In summary, while scalar scoring offers theoretically higher resolution, its practical performance is heavily contaminated by subjective noise, distributional bias, and score inflation. In contrast, \textbf{Weighted Binary Evaluation} forces the model to make explicit categorical decisions, effectively suppressing the "intermediate-value escape" caused by cognitive uncertainty.The binary protocol not only achieves the lowest prompt sensitivity (lowest $K$ values) but also demonstrates the highest reproducibility, as evidenced by high-density point overlaps. Consequently, the \textbf{MemIndex Benchmark} officially adopts \textbf{Binary LLM-as-a-Judge} as its core evaluation architecture to ensure objectivity and rigor in measuring long-term memory capabilities.

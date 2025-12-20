@@ -1,0 +1,11 @@
+\subsection{Strict Output Enforcement Protocols}
+
+In order to guarantee the machine readability and stability of the model's outputs, the framework delineates three standardised interaction protocols, with the objective of accommodating varying model capabilities and application scenarios.
+
+\begin{enumerate}
+\item \textbf{Direct Mode}: The model is compelled to produce solely the words \texttt{true} or \texttt{false}. This mode has been engineered to maximally suppress autoregressive interference from Chain of Thought (CoT) reasoning, rendering it suitable for large-scale validation scenarios requiring extremely high throughput and low latency.
+\item \textbf{SSE Mode}: The data is arranged in a row-based \texttt{key: value} format, for example, \texttt{reason: ... \textbackslash n answer: ...}. This approach maintains the interpretability of the reasoning process while supporting streaming parsing, facilitating real-time monitoring and evaluation of the logic.
+\item \textbf{JSON Mode}: The implementation of complete JSON object output is enforced, rendering it suitable for scenarios necessitating programmatic parsing of complex reasoning logic or integration with other automated systems.
+\end{enumerate}
+
+The aforementioned three modes collectively constitute the framework's interface layer. By means of a strict constraint on the output space through prompt engineering, the transformation of natural language-generated evaluation tasks into quasi-deterministic classification tasks is achieved.

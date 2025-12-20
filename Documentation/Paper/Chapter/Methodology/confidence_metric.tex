@@ -1,0 +1,11 @@
+\subsection{Logprobs-based Confidence Metric}
+
+To address the limitations in granularity of binary classification, and to investigate the certainty of model judgements during the validation of foundational capabilities in Phase One, a confidence metric was introduced that was based on model output log-probabilities in the \textbf{BoolQ validation experiment} (the purpose of this metric is primarily to validate the reliability boundaries of the Judge LLM itself, and it was not directly applied to the scoring system of the MemIndex Benchmark).
+
+For each decision rendered by the adjudicative model, two things are recorded: its textual output and the average log probability of generated tokens.
+
+$$
+\bar{p} = \frac{1}{N} \sum_{i=1}^{N} \log P(t_i | t_{<i}, \text{context})
+$$
+
+Then calculate the confidence score $Confidence = e^{\bar{p}}$.This metric introduces a continuous confidence dimension to the binary result, enabling us to distinguish between "confidently correct" and "tentatively correct" judgments.By setting a confidence threshold $t$, we can filter out low-confidence judgments, thereby finding the optimal balance point between Accuracy and Coverage, thus achieving a Meta-Evaluation of the Judge model's inherent reliability.

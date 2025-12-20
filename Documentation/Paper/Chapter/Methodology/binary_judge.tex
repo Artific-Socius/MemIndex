@@ -1,0 +1,9 @@
+\subsection{Binary LLM as a Judge}
+
+In complex long-text question answering and Agent memory evaluation, the boundary between "good" and "bad" is often ambiguous, yet the logical implication relationship between "true" and "false" remains deterministic.We formalize the evaluation task as a binary classification problem defined by a triplet $(C, Q, A)$, where $C$ represents the Context/Ground Truth (context memory), $Q$ is the Query (question), and $A$ is the Answer to be evaluated.The Judge LLM is required to determine whether $A$ is strictly and logically implied by the factual description in $C$ corresponding to $Q$:
+
+$$
+f_{judge}(C, Q, A) \in \{\text{True}, \text{False}\}
+$$
+
+This Binary LLM as a Judge approach compels the model to abandon ambiguous intermediate scores (such as "3 points" or "4 points"), thereby eliminating the Central Tendency Bias and significantly enhancing the Consistency and Objectivity of the evaluation results. Any factual error or hallucination will be judged as False under this strict binary perspective, thus ensuring a high standard of assessment.

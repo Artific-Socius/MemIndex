@@ -20,3 +20,6 @@ $clean_ext = 'bbl synctex.gz';
 # 设置bibtex和biber的输出目录
 $bibtex_use = 2;
 $biber = 'biber --output-directory=build %O %S';
+
+
+
