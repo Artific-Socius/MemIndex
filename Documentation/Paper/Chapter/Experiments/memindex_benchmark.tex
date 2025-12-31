@@ -1,5 +1,5 @@
 \subsection{MemIndex Benchmark Experiment}
-The MemIndex Benchmark is an enhanced evaluation framework for assessing the memory capabilities of Large Language Models, built upon and refined from the original LTM Benchmark [ref].
+The MemIndex Benchmark is an enhanced evaluation framework for assessing the memory capabilities of Large Language Models, built upon and refined from the original LTM Benchmark \ph{[ref]}.
 
 \subsubsection{Experimental Setup}
 
@@ -8,7 +8,7 @@ The present experiment is an evaluation of the memory performance of standard LL
 \begin{enumerate}
 \item Multi- lendemic dialogue: The target Agent engages in sequential dialogues across multiple predefined evaluation subsets.
 
-\item Memory Span Stress Testing [ref\_ltm]: A fixed Memory Span is maintained, ensuring that a substantial volume of "noise" (distractor dialogue) is inserted between the critical data points and the query. This is designed to rigorously challenge the model's long-term retrieval and retention capabilities.
+\item Memory Span Stress Testing \ph{[ref\_ltm]}: A fixed Memory Span is maintained, ensuring that a substantial volume of "noise" (distractor dialogue) is inserted between the critical data points and the query. This is designed to rigorously challenge the model's long-term retrieval and retention capabilities.
 
 \item Judgement-based Evaluation: Queries are presented to the Agent, and the responses are evaluated by an LLM Judge against the ground truth labels provided in the dataset.
 
@@ -17,7 +17,7 @@ The present experiment is an evaluation of the memory performance of standard LL
 
 \paragraph{Dataset Reconstruction}
 
-The dataset under consideration is derived from the GoodAI LTM Benchmark [ref]. A comprehensive architectural system has been implemented for the purpose of reconstructing the original data. A dedicated Markup Language was developed for the purpose of facilitating rapid dataset editing. This Markup Language is subsequently processed by the proprietary Dataset Compiler to generate the final JSON-formatted evaluation sets.
+The dataset under consideration is derived from the GoodAI LTM Benchmark \ph{[ref]}. A comprehensive architectural system has been implemented for the purpose of reconstructing the original data. A dedicated Markup Language was developed for the purpose of facilitating rapid dataset editing. This Markup Language is subsequently processed by the proprietary Dataset Compiler to generate the final JSON-formatted evaluation sets.
 
 In comparison with the original GoodAI LTM Benchmark, specific optimisations and adjustments have been introduced to the data distribution, rendering it more robust and suitable for stress-testing the memory architectures of contemporary LLMs.
 
@@ -149,7 +149,9 @@ In order to facilitate a profound interpretation of experimental data, a compreh
 
 \subsubsection{Main Results}
 
+\begin{placeholderblock}
 [这里需要插入多张布局后的图片]
+\end{placeholderblock}
 
 In order to rigorously quantify the reliability of the LLM-as-a-Judge paradigm, a systematic comparative analysis was performed between the \textbf{Binary Evaluation} and \textbf{Score Generation} . The \textbf{DBSCAN (Density-Based Spatial Clustering of Applications with Noise)} algorithm was employed to model the scoring distributions produced under three distinct prompt variants (\textit{Default}, \textit{Strict}, and \textit{Lenient}). Furthermore, the mean number of cluster centres ($K$) was introduced as a quantitative metric to evaluate Prompt Sensitivity.
 

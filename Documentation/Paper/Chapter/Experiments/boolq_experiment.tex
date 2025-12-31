@@ -1,9 +1,9 @@
 \subsection{BoolQ Binary Classification Experiment}
-Based on the BoolQ dataset [ref] provided by Google, this experiment is designed to assess the performance of LLMs in binary classification tasks.
+Based on the BoolQ dataset \ph{[ref]} provided by Google, this experiment is designed to assess the performance of LLMs in binary classification tasks.
 
 \subsubsection{Experimental Setup}
 
-The Google BoolQ dataset [ref] was utilised, containing a total of 15,942 instances. Each instance comprises three core features: a textual question, a binary answer, and a contextual passage (serving as evidence to support the answer).
+The Google BoolQ dataset \ph{[ref]} was utilised, containing a total of 15,942 instances. Each instance comprises three core features: a textual question, a binary answer, and a contextual passage (serving as evidence to support the answer).
 
 The present dataset is employed for the purpose of evaluating the binary classification capabilities of Large Language Models (LLMs). The methodology employed is composed of three distinct response-style prompts, each of which is paired with a specific data parsing and post-processing pipeline.
 
@@ -20,7 +20,9 @@ In this mode, the Large Language Model (LLM) is required to respond exclusively 
 
 This approach is specifically designed to maximise the suppression of statistical cumulative instability inherent in the auto-regressive architecture of LLMs.
 
+\begin{placeholderblock}
 [这里插入一段简单的，累乘高概率最后变成低概率的数学公式]
+\end{placeholderblock}
 \begin{verbatim}
 # Instructions
 Please perform your reasoning strictly according to these steps:
@@ -49,7 +51,7 @@ answer: [True / False]
 \end{verbatim}
 
 \subparagraph{JSON Mode: Generalised Structured Output Pattern}
-This mode is considered to represent the industry standard for the transformation of Large Language Models into functional "Work Models" [ref]. In JSON mode, the LLM is required to encapsulate both the reason and the answer within a structured JSON format to facilitate seamless programmatic parsing.
+This mode is considered to represent the industry standard for the transformation of Large Language Models into functional "Work Models" \ph{[ref]}. In JSON mode, the LLM is required to encapsulate both the reason and the answer within a structured JSON format to facilitate seamless programmatic parsing.
 
 With regard to universal compatibility, the methodology employed involves the configuration of the API parameter to \texttt{response\_format = json\_object}in conjunction with the implementation of robust regular expression (Regex) adaptation. This is a consequence of the inconsistent output behaviours exhibited by different models. While some models generate raw JSON strings, others wrap the content in Markdown code blocks (e.g., \texttt{\`\`\`json\textbackslash n\{json string\}\textbackslash n\`\`\`}). The experimental pipeline has been designed to dynamically adapt to these variations in order to ensure data integrity.
 
@@ -72,7 +74,9 @@ answer false: Indicates a contradiction or an error within the Human Judgment an
 Following a manual inspection, it was determined that the original dataset could not be utilised directly due to the presence of contentious samples. These problematic entries are typically categorised into two main types: non-binary responses, where the question cannot be answered with a simple true/false, and irrelevant context, where the question is decoupled from the provided passage.
 
 In order to guarantee the validity of the evaluation, a hybrid cleaning pipeline was implemented. The process entails the implementation of a preliminary filtration procedure, which is based on the LLM. This is followed by a meticulous, item-by-item audit of the candidates that have been filtered. The aforementioned controversial instances were then consolidated into a single file, designated as dirty\_data.jsonl. During the subsequent testing phase, this "exclusion list" was loaded to ensure that the benchmarks were conducted exclusively on the refined "clean" dataset.
+\begin{placeholderblock}
 [这里插入争议数据集分类类别数据表]
+\end{placeholderblock}
 
 \subsubsection{Experimental parameters}
 
