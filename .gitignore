@@ -5,3 +5,7 @@
 .cursur
 __pycache__
 MemIndex/data/reports
+
+# Benchmark 原始数据：本地克隆/下载的数据集全文不入库，仅保留 raw/README.md 说明
+UniversalBenchmark/benchmark/data/raw/**
+!UniversalBenchmark/benchmark/data/raw/README.md
