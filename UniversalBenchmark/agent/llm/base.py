@@ -1,8 +1,17 @@
 from __future__ import annotations
 
+import time
 from typing import Any, Optional
 
 import litellm
+from loguru import logger
+
+_NON_RETRYABLE = {
+    "AuthenticationError",
+    "BadRequestError",
+    "NotFoundError",
+    "ContentPolicyViolationError",
+}
 
 
 class LLMMixin:
@@ -28,6 +37,8 @@ class LLMMixin:
         max_tokens: Optional[int] = None,
         top_p: Optional[float] = None,
         llm_tag: str = "",
+        max_retries: int = 3,
+        retry_base_delay: float = 1.0,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -37,6 +48,8 @@ class LLMMixin:
         self._max_tokens = max_tokens
         self._top_p = top_p
         self._llm_tag = llm_tag
+        self._max_retries = max_retries
+        self._retry_base_delay = retry_base_delay
         self._extra_params: dict[str, Any] = {}
         self._last_raw_response: Any = None
 
@@ -56,11 +69,14 @@ class LLMMixin:
     # ------------------------------------------------------------------
 
     def generate(self, messages: list[dict[str, Any]], **kwargs: Any) -> str:
-        """调用 LLM 生成回复。
+        """调用 LLM 生成回复，失败时自动重试。
 
         处理流程::
 
-            prepare_messages → litellm.completion → parse_response
+            prepare_messages → litellm.completion (+ 重试) → parse_response
+
+        认证、参数、模型不存在等不可恢复的错误会立即抛出；
+        速率限制、网络超时、服务不可用等瞬时错误会按指数退避重试。
 
         额外的 *kwargs* 会转发给 ``litellm.completion()``，
         **仅在本次调用中** 覆盖已配置的默认参数。
@@ -69,13 +85,31 @@ class LLMMixin:
         params = self._build_completion_params()
         params.update(kwargs)
 
-        response = litellm.completion(
-            model=self.model_name,
-            messages=prepared,
-            **params,
-        )
-        self._last_raw_response = response
-        return self.parse_response(response)
+        last_error: Optional[Exception] = None
+        for attempt in range(self._max_retries):
+            try:
+                response = litellm.completion(
+                    model=self.model_name,
+                    messages=prepared,
+                    **params,
+                )
+                self._last_raw_response = response
+                return self.parse_response(response)
+            except Exception as exc:
+                if type(exc).__name__ in _NON_RETRYABLE:
+                    raise
+                last_error = exc
+                logger.warning(
+                    f"LLM 调用失败 "
+                    f"(第 {attempt + 1}/{self._max_retries} 次): "
+                    f"{type(exc).__name__}: {exc}"
+                )
+                if attempt < self._max_retries - 1:
+                    time.sleep(self._retry_base_delay * (2 ** attempt))
+
+        raise RuntimeError(
+            f"LLM 在 {self._max_retries} 次重试后仍然失败"
+        ) from last_error
 
     # ------------------------------------------------------------------
     # 钩子方法 - 子类可覆写以定制行为

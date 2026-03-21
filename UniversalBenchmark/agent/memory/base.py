@@ -88,6 +88,37 @@ class MemoryMixin(ABC):
         return {"role": role, "content": content}
 
     # ------------------------------------------------------------------
+    # 批量导入
+    # ------------------------------------------------------------------
+
+    def bulk_import(
+        self,
+        conversations: list[tuple[str, str]],
+    ) -> int:
+        """批量导入历史对话到记忆系统。
+
+        用于 benchmark 等需要先预填充大量历史数据再测试的场景。
+        默认实现逐条调用 ``get_messages`` + ``add_response``，
+        子类可覆写以使用更高效的批量接口。
+
+        Parameters
+        ----------
+        conversations:
+            对话轮次列表，每个元素为 ``(user_input, assistant_response)`` 元组。
+
+        Returns
+        -------
+        int
+            成功导入的轮次数。
+        """
+        imported = 0
+        for user_input, assistant_response in conversations:
+            self.get_messages(user_input)
+            self.add_response(assistant_response)
+            imported += 1
+        return imported
+
+    # ------------------------------------------------------------------
     # 标识符
     # ------------------------------------------------------------------
 

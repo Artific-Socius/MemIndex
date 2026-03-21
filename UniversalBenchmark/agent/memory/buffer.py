@@ -43,6 +43,16 @@ class BufferMemory(MemoryMixin):
     def reset(self) -> None:
         self._history.clear()
 
+    def bulk_import(
+        self,
+        conversations: list[tuple[str, str]],
+    ) -> int:
+        """直接追加到历史，跳过 get_messages 的组装开销。"""
+        for user_input, assistant_response in conversations:
+            self._history.append(self._make_message("user", user_input))
+            self._history.append(self._make_message("assistant", assistant_response))
+        return len(conversations)
+
     @property
     def turn_count(self) -> int:
         """已完成的对话轮数。"""

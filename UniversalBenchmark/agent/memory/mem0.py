@@ -134,6 +134,25 @@ class Mem0Memory(MemoryMixin):
 
         self._pending_user_input = None
 
+    def bulk_import(
+        self,
+        conversations: list[tuple[str, str]],
+    ) -> int:
+        """批量提交给 Mem0 进行记忆抽取，同时追加到本地历史。
+
+        跳过 get_messages 中的搜索步骤，直接调用 _add_to_mem0。
+        """
+        self._ensure_initialized()
+        imported = 0
+        for user_input, assistant_response in conversations:
+            self._history.append(self._make_message("user", user_input))
+            self._history.append(
+                self._make_message("assistant", assistant_response),
+            )
+            if self._add_to_mem0(user_input, assistant_response):
+                imported += 1
+        return imported
+
     def reset(self) -> None:
         self._history.clear()
         self._pending_user_input = None

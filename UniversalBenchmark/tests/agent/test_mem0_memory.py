@@ -5,6 +5,7 @@
 """
 
 import os
+from typing import Any
 
 import pytest
 from dotenv import load_dotenv
@@ -250,7 +251,7 @@ class TestMem0MemoryIntegration:
 class TestMem0MemoryWithLLM:
     """Mem0Memory + Agent + 真实 LLM 的端到端测试。"""
 
-    def _make_agent(self, **kwargs: object) -> Agent:
+    def _make_agent(self, **kwargs: Any) -> Agent:
         AgentCls = Agent.compose(Mem0Memory)
         return AgentCls(
             model=MODEL,

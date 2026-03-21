@@ -5,6 +5,7 @@
 """
 
 import os
+from typing import Any
 
 import pytest
 from dotenv import load_dotenv
@@ -147,7 +148,7 @@ class TestBufferMemoryUnit:
 class TestBufferMemoryWithLLM:
     """BufferMemory 与真实 LLM 的端到端测试。"""
 
-    def _make_agent(self, **kwargs: object) -> Agent:
+    def _make_agent(self, **kwargs: Any) -> Agent:
         AgentCls = Agent.compose(BufferMemory)
         return AgentCls(
             model=MODEL,
