@@ -28,6 +28,7 @@
     print(format_report(result, verbose=True))
 """
 
+from .adapter import UniversalAdapter
 from .base import AnyScenario, BenchmarkLite, InteractiveScenario
 from .report import format_report, to_dict, to_json
 from .runner import Runner
@@ -49,6 +50,8 @@ __all__ = [
     # ABC
     "BenchmarkLite",
     "InteractiveScenario",
+    # 适配器
+    "UniversalAdapter",
     # 类型别名
     "AnyScenario",
     # 输入侧

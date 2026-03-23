@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from loguru import logger
+
 from .base import MemoryMixin
 
 
@@ -48,10 +50,14 @@ class BufferMemory(MemoryMixin):
         conversations: list[tuple[str, str]],
     ) -> int:
         """直接追加到历史，跳过 get_messages 的组装开销。"""
+        total = len(conversations)
+        ident = self.memory_identifier
+        logger.info(f"[{ident}] 开始批量导入 {total} 条对话（本地缓冲模式）")
         for user_input, assistant_response in conversations:
             self._history.append(self._make_message("user", user_input))
             self._history.append(self._make_message("assistant", assistant_response))
-        return len(conversations)
+        logger.info(f"[{ident}] 批量导入完成: 共导入 {total} 条对话")
+        return total
 
     @property
     def turn_count(self) -> int:

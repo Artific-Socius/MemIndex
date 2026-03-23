@@ -1,32 +1,149 @@
 # Benchmark Lite — 开发者指南
 
-## 你的 Benchmark 需要做什么
-
-你有一个评估 Agent 记忆能力的测试方案。你想把它接入这个框架，让它能直接跑。
-
-你只需要做两件事：
-
-1. **描述你的测试流程** — 告诉框架"发什么消息给 Agent、怎么判断对错"
-2. **汇总分数** — 告诉框架"最终得分怎么算"
-
-框架会负责：创建 Agent、驱动对话、收集结果、生成报告。
+> **本文档已迁移。** 完整的开发者文档体系位于 [`docs/`](../docs/README.md)：
+>
+> - [总览](../docs/README.md)
+> - [记忆后端实现指南](../docs/guide-memory.md)
+> - [数据提供者实现指南](../docs/guide-benchmark-data.md)
+> - [自定义 Benchmark 实现指南](../docs/guide-benchmark-lite.md)
+>
+> 以下为旧版内容，仅作存档参考。
 
 ---
 
-## 最小实现
+## 概述
+
+本框架将 Benchmark 评测分为两层：
+
+- **数据层** (`benchmark/`) — 加载和标准化各种数据集
+- **逻辑层** (`benchmark_lite/`) — 执行评测、打分、生成报告
+
+开发者可以选择两种接入方式：
+
+| 方式 | 适用场景 | 你要做的 |
+|------|---------|---------|
+| **简单模式** — 只提供数据 | 你有一个数据集，想用框架已有的打分器跑 | 实现 `benchmark.interfaces` 中的 `Benchmark` + `Scene` + `Question` |
+| **高级模式** — 自定义执行逻辑 | 你需要自定义对话调度或打分方式 | 实现 `benchmark_lite.BenchmarkLite` 子类 |
+
+---
+
+## 简单模式：只提供数据（推荐）
+
+只需要在 `benchmark/` 中实现数据接口，框架通过 `UniversalAdapter` 自动将其转换为可执行的 Benchmark。
+
+### 最小实现
+
+```python
+# benchmark/data/providers/my_dataset/my_benchmark.py
+
+from benchmark.interfaces import Benchmark, Scene, Question, EvidenceBundle, ScoringConfig, ConversationTurn
+
+class MyScene(Scene):
+    @property
+    def scene_id(self) -> str:
+        return "scene_0"
+
+    @property
+    def scene_name(self) -> str:
+        return "基本记忆测试"
+
+    def conversation_history(self) -> list[ConversationTurn]:
+        """提供对话历史（会自动注入 Agent 的记忆）。"""
+        return [
+            ConversationTurn("我叫小明，今年25岁", "你好小明！"),
+            ConversationTurn("我住在北京", "北京是个好地方。"),
+        ]
+
+    def questions(self):
+        """提供评估问题。"""
+        yield Question(
+            question_id="q0",
+            question_text="我叫什么名字？",
+            ground_truth="小明",
+            evidence=EvidenceBundle(evidence_type="none", payload={}),
+            scoring=ScoringConfig(eval_mode="keyword", eval_prompt_key="default"),
+        )
+
+class MyBenchmark(Benchmark):
+    @property
+    def benchmark_name(self) -> str:
+        return "MyDataset"
+
+    def list_scenes(self):
+        return ["scene_0"]
+
+    def get_scene(self, scene_id: str) -> Scene:
+        return MyScene()
+```
+
+### 运行
+
+```bash
+cd UniversalBenchmark
+
+python run_benchmark_lite.py \
+    --benchmark benchmark.data.providers.my_dataset.my_benchmark.MyBenchmark \
+    --memory buffer \
+    --model openrouter/google/gemini-2.5-flash-lite
+```
+
+框架会自动：
+1. 检测到这是 `benchmark.interfaces.Benchmark` 的子类
+2. 用 `UniversalAdapter` 包装它
+3. 将 `conversation_history()` 注入 Agent 记忆
+4. 用 `ScoringConfig.eval_mode` 指定的打分器评估每个问题
+5. 生成报告
+
+### Scene 提供数据的两种方式
+
+| 方式 | 方法 | 适用场景 |
+|------|------|---------|
+| 对话历史 | `conversation_history()` | 记忆测试：先聊天再提问 |
+| 背景语料 | `background_text()` | RAG/检索测试：给定文档再提问 |
+
+两种方式可以共存。适配器的处理优先级：
+1. 有 `conversation_history()` → 转为 `preload_history`（逐轮注入 Agent 记忆）
+2. 无对话历史但有 `background_text()` → 作为一整段文本注入
+
+### 内置打分器 (`eval_mode`)
+
+在 `ScoringConfig.eval_mode` 中指定：
+
+| eval_mode | 说明 | 需要 LLM |
+|-----------|------|---------|
+| `keyword` | 关键词匹配（`ground_truth` 中的关键词是否出现在回复中） | 否 |
+| `binary` | LLM 判断正确/错误 | 是 |
+| `score` | LLM 给出 0-1 连续分数 | 是 |
+| `multi_score` | LLM 对多个评分点分别打分 | 是 |
+| `weighted_binary` | 多项加权二元评判 | 是 |
+
+LLM 评估使用 `--eval-model` 参数指定的模型。
+
+### 文件放在哪
+
+```
+benchmark/
+  data/
+    providers/
+      my_dataset/            ← 你的数据集
+        __init__.py           ← 导出 MyBenchmark
+        my_benchmark.py       ← 实现 Benchmark / Scene / Question
+        ...                   ← 数据文件、加载逻辑等
+```
+
+---
+
+## 高级模式：自定义执行逻辑
+
+如果你需要完全控制对话调度和评分方式，直接实现 `BenchmarkLite` 子类。
+
+### 最小实现
 
 ```python
 from benchmark_lite import (
-    AggregateResult,
-    BenchmarkLite,
-    Scenario,
-    ScenarioResult,
-    Turn,
-    TurnResult,
-    TurnScore,
-    TurnType,
+    AggregateResult, BenchmarkLite, Scenario, ScenarioResult,
+    Turn, TurnResult, TurnScore, TurnType,
 )
-
 
 class MyBenchmark(BenchmarkLite):
 
@@ -35,21 +152,18 @@ class MyBenchmark(BenchmarkLite):
         return "MyBenchmark"
 
     def get_scenarios(self):
-        """定义测试场景：先说一句话，再提一个问题。"""
         return [
             Scenario(id="test_1", turns=[
-                Turn("我叫小明"),                                          # 对话
-                Turn("我叫什么？", TurnType.EVALUATION, reference="小明"),   # 评估
+                Turn("我叫小明"),
+                Turn("我叫什么？", TurnType.EVALUATION, reference="小明"),
             ]),
         ]
 
     def evaluate(self, turn, response, history):
-        """判分：回复里有没有正确答案。"""
         found = turn.reference in response
         return TurnScore(score=1.0 if found else 0.0, passed=found)
 
     def aggregate(self, scenario_results):
-        """汇总：统计通过率。"""
         scores = [ts for sr in scenario_results for ts in sr.eval_scores]
         total = len(scores)
         passed = sum(1 for s in scores if s.passed)
@@ -62,47 +176,26 @@ class MyBenchmark(BenchmarkLite):
         )
 ```
 
-运行：
+### 三种场景模式
 
-```bash
-cd UniversalBenchmark
+#### 模式 A — 脚本化场景
 
-python run_benchmark.py \
-    --benchmark my_module.MyBenchmark \
-    --memory buffer \
-    --model openrouter/google/gemini-2.5-flash-lite
-```
-
-就这些。下面是详细说明。
-
----
-
-## 三种场景模式
-
-根据你的测试数据长什么样，选一种模式。
-
-### 模式 A — 脚本化场景
-
-**适用于：** 你有固定的对话脚本。先说几句话注入信息，再问问题检验。
+预定义 Turn 列表，逐回合评估。
 
 ```python
 Scenario(
     id="recall_name",
     turns=[
-        Turn("我叫小明，今年25岁"),               # CONVERSATION（默认）
-        Turn("今天天气真好"),                       # CONVERSATION
-        Turn("我叫什么？",                         # EVALUATION
-             turn_type=TurnType.EVALUATION,
-             reference=["小明"]),
+        Turn("我叫小明，今年25岁"),
+        Turn("今天天气真好"),
+        Turn("我叫什么？", turn_type=TurnType.EVALUATION, reference=["小明"]),
     ],
 )
 ```
 
-你需要实现 `evaluate()` 方法来判分。
+#### 模式 B — 预置历史
 
-### 模式 B — 预置历史
-
-**适用于：** 你的数据集本身就是一段对话记录 + 问题。Agent 不需要生成历史对话，直接记住然后回答。
+对话历史已给定，Agent 直接回答问题。
 
 ```python
 Scenario(
@@ -112,142 +205,107 @@ Scenario(
         HistoryTurn("我住在北京", "北京是个好地方"),
     ],
     turns=[
-        Turn("我叫什么？住在哪？",
-             turn_type=TurnType.EVALUATION,
-             reference=["张三", "北京"]),
+        Turn("我叫什么？住在哪？", turn_type=TurnType.EVALUATION, reference=["张三", "北京"]),
     ],
 )
 ```
 
-`preload_history` 中的对话会通过 Agent 的 `bulk_import()` 接口批量写入记忆，不经过 LLM。之后的 `turns` 正常运行。数据量大时效率远高于逐条导入。
+#### 模式 C — 交互式场景
 
-判分同样靠 `evaluate()` 方法。
-
-### 模式 C — 交互式场景
-
-**适用于：** 对话流程不是固定的。你需要根据 Agent 的回复动态决定下一步，或者整个对话结束后才能评估。
+动态生成回合，事后评估。
 
 ```python
 from benchmark_lite import InteractiveScenario, ScenarioScore
 
 class MyInteractive(InteractiveScenario):
-
     @property
     def id(self):
         return "dynamic_test"
 
     def next_turn(self, history):
-        """每次被调用时，决定下一轮说什么。返回 None 表示结束。"""
         if len(history) >= 10:
             return None
         return Turn("下一个问题...")
 
     def evaluate(self, history):
-        """对话全部结束后，回顾所有记录，打分。"""
         return ScenarioScore(score=0.8, passed=True)
 ```
 
-然后在你的 `BenchmarkLite` 子类的 `get_scenarios()` 里返回它：
-
-```python
-def get_scenarios(self):
-    return [MyInteractive()]
-```
-
-交互式场景不需要实现 `BenchmarkLite.evaluate()`，因为评估逻辑在场景自身的 `evaluate()` 里。
-
----
-
-## 你必须实现的方法
+### 你必须实现的方法
 
 | 方法 | 何时需要 | 作用 |
 |------|---------|------|
-| `name` (property) | 总是 | Benchmark 名称，显示在报告里 |
+| `name` (property) | 总是 | Benchmark 名称 |
 | `get_scenarios()` | 总是 | 返回场景列表 |
 | `evaluate(turn, response, history)` | 模式 A/B | 对单个评估回合判分 |
-| `aggregate(scenario_results)` | 总是 | 把所有场景的分数汇总成最终结果 |
+| `aggregate(scenario_results)` | 总是 | 汇总所有场景的分数 |
+
+### 文件放在哪
+
+```
+benchmark_lite/
+  benchmarks/
+    my_bench/
+      __init__.py
+      benchmark.py
+      ...
+```
 
 ---
 
-## AggregateResult — 分数汇报格式
+## 注册自定义打分器
 
-`aggregate()` 必须返回一个 `AggregateResult`，它有固定的字段：
+如果内置的 `eval_mode` 不够用，可以注册自定义打分器：
 
 ```python
-AggregateResult(
-    score=0.75,           # 最终得分 (0~1)，你定义它的含义
-    total_score=6.0,      # 原始累加得分
-    total_max_score=8.0,  # 最大可能得分
-    total=8,              # 评估点总数
-    passed=6,             # 通过数
-    detail="...",         # 可选，人类可读的总结
-    extra={...},          # 可选，你的 benchmark 特有的指标
-)
+from benchmark_lite.evaluators import BaseEvaluator, register_evaluator
+from benchmark_lite.types import TurnScore
+
+@register_evaluator("my_custom_eval")
+class MyEvaluator(BaseEvaluator):
+    def __init__(self, model: str = "", **kwargs):
+        super().__init__(**kwargs)
+
+    def evaluate(self, question_text, ground_truth, response, max_score=1.0, evidence=None):
+        # 你的打分逻辑
+        score = ...
+        return TurnScore(score=score, passed=score > 0.5, detail="...")
 ```
 
-框架会这样展示：
+然后在 `ScoringConfig` 中使用 `eval_mode="my_custom_eval"`。
 
-```
-  Score       : 75.00%  (6.0000 / 8.0000)
-  Evaluations : 6 / 8 passed  (75.00%)
-```
-
-`extra` 里的内容会作为附加行显示。
+确保你的 evaluator 模块在运行前被 import（例如放在 `benchmark_lite/evaluators/` 下，
+或在你的 benchmark 模块的顶层 import 它）。
 
 ---
 
-## 数据流
+## 完整数据流
 
 ```
-你的代码                           框架代码
-────────                         ──────────
+简单模式 (数据层 Benchmark)           高级模式 (BenchmarkLite)
+──────────────────────              ──────────────────────
 
-get_scenarios()  ──→  Runner 遍历每个场景
-                          │
-                          ├─ Scenario?
-                          │    ├─ 预载 preload_history (如果有)
-                          │    ├─ 逐个执行 Turn
-                          │    │    ├─ CONVERSATION → agent.chat()
-                          │    │    └─ EVALUATION  → agent.chat() → evaluate()
-                          │    └─ 收集 ScenarioResult
-                          │
-                          └─ InteractiveScenario?
-                               ├─ 循环调用 next_turn() → agent.chat()
-                               ├─ next_turn() 返回 None → 结束
-                               ├─ 调用 evaluate() → ScenarioScore
-                               └─ 收集 ScenarioResult
-
-aggregate(所有场景结果)  ──→  AggregateResult  ──→  报告 / JSON
+benchmark.interfaces.Benchmark       BenchmarkLite 子类
+        │                                    │
+        ▼                                    │
+  UniversalAdapter                           │
+  (自动转换 Scene → Scenario)                │
+        │                                    │
+        └──────────┬─────────────────────────┘
+                   │
+                   ▼
+              Runner.run()
+                   │
+        ┌──────────┼──────────────┐
+        ▼          ▼              ▼
+    Scenario   Scenario    InteractiveScenario
+    (脚本化)   (预置历史)      (动态交互)
+        │          │              │
+        └──────────┼──────────────┘
+                   │
+                   ▼
+            AggregateResult → 报告 / JSON
 ```
-
----
-
-## 数据结构速查
-
-**输入侧（你构造的）：**
-
-| 结构 | 用途 |
-|------|------|
-| `Turn(user_input, turn_type, reference)` | 一轮对话。`reference` 是评估依据，类型任意 |
-| `HistoryTurn(user_message, assistant_response)` | 预置历史中的一轮 |
-| `Scenario(id, turns, preload_history)` | 脚本化场景 |
-
-**输出侧（你填充的）：**
-
-| 结构 | 用途 |
-|------|------|
-| `TurnScore(score, passed, detail)` | 单轮评分。`evaluate()` 返回这个 |
-| `ScenarioScore(score, passed, turn_annotations)` | 场景整体评分。`InteractiveScenario.evaluate()` 返回这个 |
-| `AggregateResult(score, total_score, ...)` | 最终汇总。`aggregate()` 返回这个 |
-
-**框架生成的（你在 aggregate 里读取的）：**
-
-| 结构 | 用途 |
-|------|------|
-| `TurnResult(turn_index, user_input, response, score)` | 一轮的完整记录 |
-| `ScenarioResult(scenario_id, turn_results, scenario_score)` | 一个场景的完整记录 |
-| `ScenarioResult.eval_scores` | 便捷属性：所有 TurnScore 的列表 |
-| `ScenarioResult.eval_count` / `.passed_count` | 便捷属性：评估数 / 通过数 |
 
 ---
 
@@ -256,43 +314,53 @@ aggregate(所有场景结果)  ──→  AggregateResult  ──→  报告 / J
 ```bash
 cd UniversalBenchmark
 
-python run_benchmark.py \
-    --benchmark <你的类的点分路径> \
+python run_benchmark_lite.py \
+    --benchmark <类的点分路径> \
     --memory buffer \
     --model openrouter/google/gemini-2.5-flash-lite \
-    -v                   # 显示每轮详情
-    -o results.json      # 保存 JSON
+    --eval-model openrouter/google/gemini-2.5-flash \
+    --scene-ids 0 1 2 \
+    -v \
+    -o results.json
 ```
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `--benchmark` | Benchmark 类的 import 路径 | (必填) |
+| `--memory` | Agent 的 Memory 类型 | `buffer` |
+| `--model` | Agent 使用的 LLM 模型 | `openrouter/google/gemini-2.5-flash-lite` |
+| `--eval-model` | 用于评估的 LLM 模型（简单模式） | `openrouter/google/gemini-2.5-flash` |
+| `--scene-ids` | 指定运行的 Scene ID（简单模式） | 全部 |
+| `-v` | 显示每轮详情 | 关闭 |
+| `-o` | 保存 JSON 结果 | 不保存 |
 
 `--memory` 可选值：`buffer`、`mem0`、`memecho`
 
-`--benchmark` 的值是 Python 的 import 路径，例如：
-- `benchmark_lite.examples.SimpleMemoryQA`
-- `benchmark_lite.benchmarks.memindex.MemIndexBenchmark`
-- `my_package.my_module.MyBenchmark`
+`--benchmark` 示例：
+- `benchmark_lite.examples.SimpleMemoryQA` (高级模式)
+- `benchmark_lite.benchmarks.memindex.MemIndexBenchmark` (高级模式)
+- `benchmark.data.providers.evermind_ai.evermembench_static.EverMemBenchStaticBenchmark` (简单模式)
 
 ---
 
-## 文件放在哪
+## 数据结构速查
 
-推荐放在 `benchmark_lite/benchmarks/` 下：
+**输入侧：**
 
-```
-benchmark_lite/
-  benchmarks/
-    my_bench/
-      __init__.py        ← 导出你的 BenchmarkLite 子类
-      benchmark.py       ← 主类
-      ...                ← 你的数据加载、评估逻辑等
-```
+| 结构 | 用途 |
+|------|------|
+| `Turn(user_input, turn_type, reference)` | 一轮对话。`reference` 是评估依据 |
+| `HistoryTurn(user_message, assistant_response)` | 预置历史中的一轮 |
+| `Scenario(id, turns, preload_history)` | 脚本化场景 |
+| `ConversationTurn(user_message, assistant_response)` | 数据层 Scene 的对话历史 |
+| `Question(question_id, question_text, ground_truth, evidence, scoring)` | 数据层的评估问题 |
+| `ScoringConfig(eval_mode, eval_prompt_key, max_score)` | 打分配置 |
 
-`__init__.py` 示例：
+**输出侧：**
 
-```python
-from .benchmark import MyBenchmark
-__all__ = ["MyBenchmark"]
-```
-
-然后用 `--benchmark benchmark_lite.benchmarks.my_bench.MyBenchmark` 运行。
-
-也可以放在项目外的任何 Python 可导入位置。
+| 结构 | 用途 |
+|------|------|
+| `TurnScore(score, passed, detail)` | 单轮评分 |
+| `ScenarioScore(score, passed, turn_annotations)` | 场景整体评分 |
+| `AggregateResult(score, total_score, ...)` | 最终汇总 |
+| `TurnResult` / `ScenarioResult` / `BenchmarkResult` | 框架生成的运行记录 |

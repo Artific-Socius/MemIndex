@@ -1,14 +1,16 @@
 from .benchmark import Benchmark
-from .scene import Scene
-from .question import Question
 from .evidence import EvidenceBundle
-from .scoring import ScoringConfig
+from .question import Question
+from .scene import ConversationTurn, Scene
+from .scoring import BuiltinEvalMode, ScoringConfig
 
 __all__ = [
     "Benchmark",
     "Scene",
+    "ConversationTurn",
     "Question",
     "EvidenceBundle",
     "ScoringConfig",
+    "BuiltinEvalMode",
 ]
 

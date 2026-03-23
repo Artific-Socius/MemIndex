@@ -3,6 +3,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
+from loguru import logger
+
 
 class MemoryMixin(ABC):
     """对话记忆管理的基础 Mixin。
@@ -111,12 +113,65 @@ class MemoryMixin(ABC):
         int
             成功导入的轮次数。
         """
+        total = len(conversations)
+        ident = self.memory_identifier
+        logger.info(
+            f"[{ident}] 开始批量导入 {total} 条对话"
+            f"（逐条模式，当前记忆方案不支持原生批量导入）"
+        )
         imported = 0
+        report_interval = max(1, total // 10)
         for user_input, assistant_response in conversations:
             self.get_messages(user_input)
             self.add_response(assistant_response)
             imported += 1
+            if imported % report_interval == 0 or imported == total:
+                logger.info(
+                    f"[{ident}] 批量导入进度: "
+                    f"{imported}/{total} ({imported * 100 // total}%)"
+                )
+        logger.info(f"[{ident}] 批量导入完成: 共导入 {imported} 条对话")
         return imported
+
+    # ------------------------------------------------------------------
+    # 语料导入
+    # ------------------------------------------------------------------
+
+    def import_corpus(
+        self,
+        documents: list[str],
+        corpus_id: str = "",
+    ) -> str:
+        """将独立的语料文档导入记忆系统，返回库标识符。
+
+        与 ``bulk_import`` 不同，此方法接收的是原始文档列表而非
+        对话对。长期记忆后端（如 Memecho）可覆写此方法以实现
+        文件级导入（分块、索引等）。
+
+        默认实现：合并全部文档为单条对话后调用 ``bulk_import``。
+
+        Parameters
+        ----------
+        documents:
+            原始文档字符串列表。
+        corpus_id:
+            可选的语料标识符（用于注册表缓存等）。
+
+        Returns
+        -------
+        str
+            库标识符。长期记忆后端返回实际的 library ID；
+            本地内存后端返回 ``corpus_id`` 或 ``"local"``。
+        """
+        merged = "\n\n".join(documents)
+        self.bulk_import([(
+            "Please read and remember the following information "
+            "carefully. I will ask you questions about it later."
+            "\n\n" + merged,
+            "I have carefully read and memorized the information "
+            "you provided. Feel free to ask me any questions about it.",
+        )])
+        return corpus_id or "local"
 
     # ------------------------------------------------------------------
     # 标识符

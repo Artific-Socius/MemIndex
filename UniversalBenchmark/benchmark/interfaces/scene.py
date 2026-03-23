@@ -1,9 +1,24 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Iterable, Optional
 
 from .question import Question
+
+
+@dataclass(frozen=True, slots=True)
+class ConversationTurn:
+    """A single turn in a structured conversation history.
+
+    Used by Scene implementations to provide pre-existing dialog context
+    for memory benchmarks that test conversational recall.  The adapter
+    layer converts these into ``preload_history`` entries so the Agent's
+    memory is populated before evaluation questions are asked.
+    """
+
+    user_message: str
+    assistant_response: str
 
 
 class Scene(ABC):
@@ -11,6 +26,13 @@ class Scene(ABC):
     Scene interface.
 
     A scene may contain multiple questions; each question can carry different evidence.
+
+    Scenes can provide context in two ways (or both):
+
+    - ``background_text()`` — a single text blob (corpus / haystack).
+    - ``conversation_history()`` — structured multi-turn dialog history.
+
+    The adapter layer inspects both to build the execution scenario.
     """
 
     @property
@@ -32,6 +54,19 @@ class Scene(ABC):
         Full retrieval / haystack context for reasoning. Default: empty (no corpus).
         """
         return ""
+
+    def conversation_history(self) -> list[ConversationTurn]:
+        """Structured conversation history for memory-based benchmarks.
+
+        Returns a sequence of user-assistant exchanges that represent
+        prior conversation context.  The adapter layer converts these
+        into ``preload_history`` entries so the Agent's memory is
+        populated before evaluation questions are asked.
+
+        Default: empty list (scene uses ``background_text`` or
+        questions only).
+        """
+        return []
 
     def question_count(self) -> int:
         return sum(1 for _ in self.questions())

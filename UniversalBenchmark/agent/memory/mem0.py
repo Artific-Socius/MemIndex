@@ -143,14 +143,31 @@ class Mem0Memory(MemoryMixin):
         跳过 get_messages 中的搜索步骤，直接调用 _add_to_mem0。
         """
         self._ensure_initialized()
+        total = len(conversations)
+        ident = self.memory_identifier
+        logger.info(
+            f"[{ident}] 开始批量导入 {total} 条对话"
+            f"（逐条提交 Mem0 API，不支持原生批量导入）"
+        )
         imported = 0
-        for user_input, assistant_response in conversations:
+        report_interval = max(1, total // 10)
+        for i, (user_input, assistant_response) in enumerate(conversations):
             self._history.append(self._make_message("user", user_input))
             self._history.append(
                 self._make_message("assistant", assistant_response),
             )
             if self._add_to_mem0(user_input, assistant_response):
                 imported += 1
+            done = i + 1
+            if done % report_interval == 0 or done == total:
+                logger.info(
+                    f"[{ident}] 批量导入进度: "
+                    f"{done}/{total} ({done * 100 // total}%)"
+                )
+        logger.info(
+            f"[{ident}] 批量导入完成: "
+            f"成功 {imported}/{total} 条对话"
+        )
         return imported
 
     def reset(self) -> None:
