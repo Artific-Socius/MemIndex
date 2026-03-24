@@ -309,7 +309,7 @@ class MemechoMemory(MemoryMixin):
     # 语料文档导入 (import_file_fast)
     # ------------------------------------------------------------------
 
-    _DEFAULT_CHUNK_CHARS = 100_000
+    _DEFAULT_CHUNK_CHARS = 5_000_000
 
     def import_corpus(
         self,

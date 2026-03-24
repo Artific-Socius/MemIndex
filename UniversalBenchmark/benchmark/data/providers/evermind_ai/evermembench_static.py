@@ -280,6 +280,9 @@ class ScaleContextScene(Scene):
         docs = self._load_corpus_if_needed()
         return _join_background(docs, max_chars=max_chars, join_sep=join_sep)
 
+    def background_documents(self) -> list[str]:
+        return list(self._load_corpus_if_needed())
+
     def question_count(self) -> int:
         return len(self._rows)
 

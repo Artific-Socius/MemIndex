@@ -241,6 +241,11 @@ class UniversalAdapter(BenchmarkLite):
                 f"{scene.question_count()})"
             )
 
+        corpus_docs = scene.background_documents()
+        corpus_id = (
+            f"{self._benchmark.benchmark_name}::{scene.scene_id}"
+        )
+
         return Scenario(
             id=scene.scene_id,
             description=scene.scene_name or "",
@@ -249,6 +254,8 @@ class UniversalAdapter(BenchmarkLite):
             metadata={
                 "task_type": scene.task_type,
                 "source_benchmark": self._benchmark.benchmark_name,
+                "corpus_documents": corpus_docs,
+                "corpus_id": corpus_id,
             },
         )
 

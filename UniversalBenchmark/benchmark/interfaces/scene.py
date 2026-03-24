@@ -55,6 +55,16 @@ class Scene(ABC):
         """
         return ""
 
+    def background_documents(self) -> list[str]:
+        """Individual corpus documents for memory backends that support
+        file-level import (e.g. Memecho ``import_file_fast``).
+
+        Default: wraps ``background_text()`` in a single-element list,
+        or returns ``[]`` if there is no background text.
+        """
+        bg = self.background_text()
+        return [bg] if bg else []
+
     def conversation_history(self) -> list[ConversationTurn]:
         """Structured conversation history for memory-based benchmarks.
 

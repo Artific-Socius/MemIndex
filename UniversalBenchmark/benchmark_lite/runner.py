@@ -116,6 +116,39 @@ class Runner:
         )
 
     # ------------------------------------------------------------------
+    # 智能上下文导入
+    # ------------------------------------------------------------------
+
+    def _import_context(
+        self,
+        agent: Agent,
+        scenario: Scenario,
+    ) -> None:
+        """Smart context loading: corpus docs -> import_corpus; history -> bulk_import."""
+        meta = scenario.metadata or {}
+        corpus_docs: list[str] = meta.get("corpus_documents", [])
+        corpus_id: str = meta.get("corpus_id", "")
+
+        if corpus_docs and hasattr(agent, "import_corpus"):
+            logger.info(
+                f"  语料导入: {len(corpus_docs)} 篇文档 "
+                f"(corpus_id={corpus_id})"
+            )
+            lib_id = agent.import_corpus(corpus_docs, corpus_id)
+            if hasattr(agent, "set_persistent_lib"):
+                agent.set_persistent_lib(lib_id)
+            return
+
+        if scenario.preload_history:
+            conversations = [
+                (entry.user_message, entry.assistant_response)
+                for entry in scenario.preload_history
+            ]
+            imported = agent.bulk_import(conversations)
+            if self._verbose:
+                logger.info(f"  批量导入 {imported} 轮对话历史")
+
+    # ------------------------------------------------------------------
     # 脚本化场景
     # ------------------------------------------------------------------
 
@@ -128,14 +161,7 @@ class Runner:
             Callable[[Scenario, TurnResult], None]
         ],
     ) -> ScenarioResult:
-        if scenario.preload_history:
-            conversations = [
-                (entry.user_message, entry.assistant_response)
-                for entry in scenario.preload_history
-            ]
-            imported = agent.bulk_import(conversations)
-            if self._verbose:
-                logger.info(f"  批量导入 {imported} 轮对话历史")
+        self._import_context(agent, scenario)
 
         turn_results: list[TurnResult] = []
         for ti, turn in enumerate(scenario.turns):
