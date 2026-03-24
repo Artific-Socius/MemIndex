@@ -43,6 +43,11 @@ import importlib
 import sys
 from typing import Type
 
+from loguru import logger
+
+logger.remove()
+logger.add(sys.stdout, colorize=True)
+
 from dotenv import load_dotenv
 
 load_dotenv()

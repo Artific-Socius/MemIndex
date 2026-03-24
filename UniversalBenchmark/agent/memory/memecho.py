@@ -10,7 +10,7 @@ from typing import Any, Optional
 
 import requests  # type: ignore[import-untyped]
 from loguru import logger
-
+import tiktoken
 from .base import MemoryMixin
 
 _DEFAULT_TIMEOUT = 60
@@ -65,6 +65,7 @@ class MemechoMemory(MemoryMixin):
         self._max_retries = max_retries
         self._custom_headers: dict[str, str] = dict(custom_headers) if custom_headers else {}
         self._persistent_lib: bool = memory_lib_id is not None
+        self.encoding = tiktoken.get_encoding("cl100k_base")
 
     # ------------------------------------------------------------------
     # 初始化
@@ -340,6 +341,7 @@ class MemechoMemory(MemoryMixin):
         )
 
         for i, chunk_text in enumerate(chunks):
+            tokens = len(self.encoding.encode(chunk_text))
             b64 = base64.b64encode(
                 chunk_text.encode("utf-8"),
             ).decode("ascii")
@@ -350,7 +352,7 @@ class MemechoMemory(MemoryMixin):
                 f"[{ident}] import_file_fast "
                 f"[{i + 1}/{len(chunks)}] "
                 f"({len(chunk_text):,} chars, "
-                f"base64 ~{b64_kb:.0f} KB)"
+                f"base64 ~{b64_kb:.0f} KB) {tokens} tokens"
             )
             self._import_file_fast(
                 data_uri,
