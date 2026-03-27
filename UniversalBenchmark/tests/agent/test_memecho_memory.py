@@ -59,10 +59,19 @@ class TestMemechoMemoryUnit:
         assert mem._read_only is True
         assert mem._max_retries == 5
 
-    def test_reset_clears_lib_id(self) -> None:
-        """reset 应清空 memory_lib_id。"""
+    def test_reset_preserves_lib_id_when_persistent(self) -> None:
+        """构造时传入 memory_lib_id 视为持久库，reset 不清空（便于跨场景复用语料）。"""
         mem = MemechoMemory(api_key="fake", memory_lib_id="lib_123")
         assert mem.memory_lib_id == "lib_123"
+
+        mem.reset()
+        assert mem.memory_lib_id == "lib_123"
+
+    def test_reset_clears_lib_id_when_ephemeral(self) -> None:
+        """未标记为持久库时 reset 应清空 memory_lib_id。"""
+        mem = MemechoMemory(api_key="fake")
+        mem._memory_lib_id = "ephemeral_lib"
+        assert mem._persistent_lib is False
 
         mem.reset()
         assert mem.memory_lib_id is None

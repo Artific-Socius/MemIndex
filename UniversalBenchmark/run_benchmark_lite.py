@@ -59,6 +59,7 @@ from agent.memory.base import MemoryMixin  # noqa: E402
 from benchmark.interfaces import Benchmark as DataBenchmark  # noqa: E402
 from benchmark_lite import (  # noqa: E402
     BenchmarkLite,
+    RunConfig,
     Runner,
     UniversalAdapter,
     format_report,
@@ -286,6 +287,30 @@ def main() -> None:
     # ── 运行 ────────────────────────────────────────────────
     runner = Runner(verbose=True)
     result = runner.run(agent, benchmark)
+
+    # ── 注入运行配置快照 ──────────────────────────────────
+    extra_cfg: dict = {}
+    if args.scene_ids is not None:
+        extra_cfg["scene_ids"] = args.scene_ids
+    if args.max_bg_chars is not None:
+        extra_cfg["max_bg_chars"] = args.max_bg_chars
+    if args.max_questions is not None:
+        extra_cfg["max_questions"] = args.max_questions
+    if args.max_turns is not None:
+        extra_cfg["max_turns"] = args.max_turns
+    if args.read_only:
+        extra_cfg["read_only"] = True
+    if args.memory_lib_id:
+        extra_cfg["memory_lib_id"] = args.memory_lib_id
+    extra_cfg["benchmark_path"] = args.benchmark
+
+    result.run_config = RunConfig(
+        memory_type=args.memory,
+        model=args.model,
+        eval_model=args.eval_model,
+        system_prompt=args.system_prompt,
+        extra=extra_cfg,
+    )
 
     # ── 输出报告 ────────────────────────────────────────────
     report = format_report(result, verbose=args.verbose)

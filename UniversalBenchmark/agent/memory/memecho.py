@@ -11,7 +11,7 @@ from typing import Any, Optional
 import requests  # type: ignore[import-untyped]
 from loguru import logger
 import tiktoken
-from .base import MemoryMixin
+from .base import MemoryMixin, TurnTrace
 
 _DEFAULT_TIMEOUT = 60
 
@@ -91,6 +91,15 @@ class MemechoMemory(MemoryMixin):
     def memory_lib_id(self) -> Optional[str]:
         return self._memory_lib_id
 
+    def ensure_memory_library(self) -> str:
+        """确保存在 Memecho 记忆库并返回真实 memory_lib_id。"""
+        self._ensure_initialized()
+        return str(self._memory_lib_id)
+
+    def get_memory_library_id(self) -> str:
+        """返回当前 Memecho 记忆库 ID。"""
+        return self.ensure_memory_library()
+
     # ------------------------------------------------------------------
     # MemoryMixin 接口实现
     # ------------------------------------------------------------------
@@ -98,11 +107,15 @@ class MemechoMemory(MemoryMixin):
     def get_messages(self, user_input: str) -> list[dict[str, Any]]:
         self._ensure_initialized()
 
+        client_user_id = str(uuid.uuid4())
+        request_id = str(uuid.uuid4())
+
         query_msg: dict[str, Any] = {
-            "id": str(uuid.uuid4()),
+            "id": client_user_id,
             "role": "user",
             "content": [{"type": "text", "text": user_input}],
         }
+        # API 要求 body 含 request_id（与 X-Request-Id、trace.query_request_id 一致）
         result: dict[str, Any] = self._request_with_retry(
             "POST",
             "/api/v1/memory/query",
@@ -112,14 +125,27 @@ class MemechoMemory(MemoryMixin):
                 "read_only": self._read_only,
                 "include_user_query": self._include_user_query,
                 "require_raw_recall_message_id_list": False,
+                "request_id": request_id,
             },
             extra_headers={
                 "X-User-Id": self._memory_lib_id or "",
-                "X-Request-Id": str(uuid.uuid4()),
+                "X-Request-Id": request_id,
             },
         )
 
-        # 将 Memecho 格式的 ready_messages 转换为 OpenAI 标准格式
+        server_user_id = result.get("user_message_id") or ""
+        if server_user_id:
+            resolved_user_id = server_user_id
+            id_source = "provider"
+        else:
+            resolved_user_id = client_user_id
+            id_source = "framework"
+
+        if self._current_turn_trace is not None:
+            self._current_turn_trace.user_message_id = resolved_user_id
+            self._current_turn_trace.id_source = id_source
+            self._current_turn_trace.query_request_id = request_id
+
         messages: list[dict[str, Any]] = []
         for item in result.get("ready_messages", []):
             text_parts: list[str] = []
@@ -142,12 +168,15 @@ class MemechoMemory(MemoryMixin):
     def add_response(self, content: str) -> None:
         self._ensure_initialized()
 
+        client_assistant_id = str(uuid.uuid4())
+        append_request_id = str(uuid.uuid4())
+
         assistant_msg: dict[str, Any] = {
-            "id": str(uuid.uuid4()),
+            "id": client_assistant_id,
             "role": "assistant",
             "content": [{"type": "text", "text": content}],
         }
-        self._request_with_retry(
+        result = self._request_with_retry(
             "POST",
             "/api/v1/memory/append-assistant-message",
             json={
@@ -156,9 +185,20 @@ class MemechoMemory(MemoryMixin):
             },
             extra_headers={
                 "X-User-Id": self._memory_lib_id or "",
-                "X-Request-Id": str(uuid.uuid4()),
+                "X-Request-Id": append_request_id,
             },
         )
+
+        server_assistant_id = ""
+        if isinstance(result, dict):
+            server_assistant_id = result.get("assistant_message_id") or ""
+
+        resolved_id = server_assistant_id or client_assistant_id
+        if self._current_turn_trace is not None:
+            self._current_turn_trace.assistant_message_id = resolved_id
+            self._current_turn_trace.append_request_id = append_request_id
+            if server_assistant_id:
+                self._current_turn_trace.id_source = "provider"
 
     def bulk_import(
         self,
@@ -394,7 +434,7 @@ class MemechoMemory(MemoryMixin):
             data arrives within this window the attempt is aborted and
             retried.
         """
-        url = f"{self._api_base_url}/api/v1/memory/import_file_fast"
+        url = f"{self._api_base_url}/api/v1/memory/import_file_fast_v2"
         headers = self._build_headers()
         payload: dict[str, Any] = {
             "file_url": file_url,

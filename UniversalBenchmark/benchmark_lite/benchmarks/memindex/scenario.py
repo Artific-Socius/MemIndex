@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import os
 import random
+import re
 from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Optional
@@ -149,6 +150,23 @@ _FALLBACK_FILLERS = [
     "What's the tallest mountain in the world?",
 ]
 
+_DEP_REF_PATTERN = re.compile(
+    r"\{(?P<answer>[0-9]+)\}"
+    r"|\{(?P<question>q:[0-9]+)\}"
+)
+
+
+def _extract_ref_indices(text: str) -> set[int]:
+    refs: set[int] = set()
+    for m in _DEP_REF_PATTERN.finditer(text):
+        answer_ref = m.group("answer")
+        question_ref = m.group("question")
+        if answer_ref:
+            refs.add(int(answer_ref))
+        elif question_ref:
+            refs.add(int(question_ref[2:]))
+    return refs
+
 
 # ── MemIndexScenario ───────────────────────────────────────────
 
@@ -195,6 +213,9 @@ class MemIndexScenario(InteractiveScenario):
         # 行内评估收集
         self._evals: list[_InlineEval] = []
         self._turn_labels: dict[int, str] = {}
+        self._emitted_turn_by_act_item: dict[str, dict[int, int]] = {
+            a.name: {} for a in self._actuators
+        }
 
         # 废话生成
         self._trivia = (
@@ -247,18 +268,21 @@ class MemIndexScenario(InteractiveScenario):
 
     def _next_run(self, history: list[TurnResult]) -> Optional[Turn]:
         tokens = self._count_tokens(history)
+        current_turn_index = len(history)
         self._update_frozen(tokens)
 
-        turn = self._try_from_queue(self._mark_queue, tokens)
+        turn = self._try_from_queue(
+            self._mark_queue, tokens, current_turn_index,
+        )
         if turn:
             return turn
 
-        turn = self._try_from_queue(self._queue, tokens)
+        turn = self._try_from_queue(self._queue, tokens, current_turn_index)
         if turn:
             return turn
 
         self._refill_queue()
-        turn = self._try_from_queue(self._queue, tokens)
+        turn = self._try_from_queue(self._queue, tokens, current_turn_index)
         if turn:
             return turn
 
@@ -268,18 +292,24 @@ class MemIndexScenario(InteractiveScenario):
         return None
 
     def _try_from_queue(
-        self, queue: list[int], tokens: int,
+        self,
+        queue: list[int],
+        tokens: int,
+        current_turn_index: int,
     ) -> Optional[Turn]:
         """从队列中依次尝试取出可执行的序列步骤。"""
         while queue:
             aidx = queue.pop(0)
-            turn = self._try_actuator_step(aidx, tokens)
+            turn = self._try_actuator_step(aidx, tokens, current_turn_index)
             if turn is not None:
                 return turn
         return None
 
     def _try_actuator_step(
-        self, aidx: int, tokens: int,
+        self,
+        aidx: int,
+        tokens: int,
+        current_turn_index: int,
     ) -> Optional[Turn]:
         """尝试从指定序列生成下一个 Turn。
 
@@ -306,6 +336,9 @@ class MemIndexScenario(InteractiveScenario):
 
         if act.start_tokens == 0:
             act.start_tokens = tokens
+        self._emitted_turn_by_act_item.setdefault(act.name, {})[
+            item.index
+        ] = current_turn_index
 
         is_retry = act.pending_retry
         act.pending_retry = False
@@ -313,6 +346,31 @@ class MemIndexScenario(InteractiveScenario):
         turn_type = (
             TurnType.EVALUATION if item.score else TurnType.CONVERSATION
         )
+        turn_meta: dict[str, object] = {
+            "actuator_name": act.name,
+            "item_index": item.index,
+        }
+        if item.score is not None:
+            sc = item.score
+            ground = resolve_refs(
+                sc.answer.replace("\\", ""), act.intermediate,
+            )
+            dep_turns, dep_policy = self._resolve_eval_dependency_info(act, item)
+            turn_meta.update({
+                "eval_method_hint": (
+                    "weighted_binary"
+                    if sc.binary_items
+                    else ("multi_score" if sc.is_multiple else self._eval_mode)
+                ),
+                "ground_truth": ground,
+                # Keep both names for downstream compatibility.
+                "evidence": ground,
+                "evidence_content_map": {
+                    "ground_truth": ground,
+                },
+                "dependency_turn_indices": dep_turns,
+                "dependency_policy": dep_policy,
+            })
 
         self._pending = _PendingAction(
             kind="actuator", actuator_idx=aidx, list_idx=act.cursor,
@@ -323,7 +381,39 @@ class MemIndexScenario(InteractiveScenario):
             f"{'(retry) ' if is_retry else ''}"
             f"{'[EVAL]' if item.score else '[CONV]'}"
         )
-        return Turn(msg, turn_type=turn_type)
+        return Turn(msg, turn_type=turn_type, metadata=turn_meta)
+
+    def _resolve_eval_dependency_info(
+        self,
+        act: _ActuatorState,
+        item: SequenceItem,
+    ) -> tuple[list[int], str]:
+        """解析评估回合依赖的前序 turn 索引。"""
+        if item.score is None:
+            return [], ""
+        explicit_dep_items: set[int] = {
+            dep for dep in item.depend if dep != item.index
+        }
+        explicit_dep_items.update(_extract_ref_indices(item.ask))
+        explicit_dep_items.update(_extract_ref_indices(item.score.answer))
+        for bi in item.score.binary_items:
+            explicit_dep_items.update(_extract_ref_indices(bi.answer))
+        emitted = self._emitted_turn_by_act_item.get(act.name, {})
+        if explicit_dep_items:
+            turns = [
+                emitted[i] for i in sorted(explicit_dep_items) if i in emitted
+            ]
+            return sorted(set(turns)), "ref"
+
+        # 无明确 ref 时，回退到该子测试（actuator）内所有前置信息语句
+        # （score is None）作为依赖。
+        fallback_turns: list[int] = []
+        for prev in act.items:
+            if prev.index == item.index:
+                break
+            if prev.score is None and prev.index in emitted:
+                fallback_turns.append(emitted[prev.index])
+        return sorted(set(fallback_turns)), "subtest_prefix_fallback"
 
     # ── 依赖检查 ──────────────────────────────────────────────
 

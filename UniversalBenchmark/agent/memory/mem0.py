@@ -92,6 +92,15 @@ class Mem0Memory(MemoryMixin):
     def user_id(self) -> Optional[str]:
         return self._user_id
 
+    def ensure_memory_library(self) -> str:
+        """确保存在 Mem0 命名空间并返回 user_id。"""
+        self._ensure_initialized()
+        return str(self._user_id)
+
+    def get_memory_library_id(self) -> str:
+        """返回当前 Mem0 命名空间 ID（user_id）。"""
+        return self.ensure_memory_library()
+
     # ------------------------------------------------------------------
     # MemoryMixin 接口实现
     # ------------------------------------------------------------------

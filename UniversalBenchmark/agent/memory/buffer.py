@@ -13,6 +13,9 @@ class BufferMemory(MemoryMixin):
     将所有消息保存在一个列表中，返回全部（或最近 *max_turns* 轮）
     作为 LLM 的上下文。这是最简单的记忆策略，无需外部服务。
 
+    Message ID 追踪使用框架默认的 UUID 兜底（不覆写
+    ``get_last_turn_trace``）。
+
     Parameters
     ----------
     max_turns:

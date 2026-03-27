@@ -1,10 +1,16 @@
-"""Benchmark Lite 的所有数据类型定义。"""
+"""Benchmark Lite 的所有数据类型定义。
+
+输入侧结构保持 dataclass（不参与序列化）；
+输出侧结构迁移为 Pydantic BaseModel，作为导出的正式 schema。
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Optional
+
+from pydantic import BaseModel, Field
 
 
 class TurnType(Enum):
@@ -18,7 +24,7 @@ class TurnType(Enum):
     EVALUATION = "evaluation"
 
 
-# ── 输入侧数据结构 ─────────────────────────────────────────────
+# ── 输入侧数据结构（保持 dataclass）─────────────────────────────
 
 
 @dataclass
@@ -91,11 +97,42 @@ class Scenario:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-# ── 输出侧数据结构 ─────────────────────────────────────────────
+# ── 输出侧数据结构（Pydantic 模型）─────────────────────────────
 
 
-@dataclass
-class TurnScore:
+class MessageTrace(BaseModel):
+    """一轮对话的 message id 与 request id 追踪记录。
+
+    一轮对话通常包含两次请求：查询（``get_messages``）和追加
+    （``add_response``），每次请求可以有独立的 request id。
+
+    Attributes
+    ----------
+    user_message_id:
+        用户消息 id。由 Memory 实现者提供真实 id，
+        或由框架自动生成 UUID 兜底。
+    assistant_message_id:
+        助手消息 id。同上。
+    id_source:
+        id 的来源标注。``"provider"`` 表示由 Memory 后端提供，
+        ``"framework"`` 表示框架自动生成的 UUID 兜底。
+    query_request_id:
+        查询请求（``get_messages``）的 request id。
+    append_request_id:
+        追加请求（``add_response``）的 request id。
+    extra:
+        Memory 后端返回的其它追踪信息。
+    """
+
+    user_message_id: str = ""
+    assistant_message_id: str = ""
+    id_source: str = "framework"
+    query_request_id: str = ""
+    append_request_id: str = ""
+    extra: dict[str, Any] = Field(default_factory=dict)
+
+
+class TurnScore(BaseModel):
     """单个 EVALUATION 回合的评估得分。
 
     Attributes
@@ -113,11 +150,10 @@ class TurnScore:
     score: float
     passed: bool
     detail: str = ""
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
-@dataclass
-class TurnAnnotation:
+class TurnAnnotation(BaseModel):
     """对单个回合的事后标注。
 
     用于 :class:`ScenarioScore`，在整个场景结束后，回溯标注
@@ -138,8 +174,7 @@ class TurnAnnotation:
     score: Optional[TurnScore] = None
 
 
-@dataclass
-class ScenarioScore:
+class ScenarioScore(BaseModel):
     """场景级别的整体评估结果（用于事后评估模式）。
 
     与逐回合评分（:class:`TurnScore`）不同，``ScenarioScore`` 是在
@@ -161,34 +196,86 @@ class ScenarioScore:
 
     score: float
     passed: bool
-    turn_annotations: list[TurnAnnotation] = field(default_factory=list)
+    turn_annotations: list[TurnAnnotation] = Field(default_factory=list)
     detail: str = ""
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
-@dataclass
-class TurnResult:
-    """单个回合的运行结果（输入 + 输出 + 可选评分）。"""
+class TurnResult(BaseModel):
+    """单个回合的运行结果（输入 + 输出 + 可选评分 + 追踪）。
+
+    Attributes
+    ----------
+    turn_index:
+        回合在场景中的序号（从 0 开始）。
+    user_input:
+        发送给 Agent 的用户消息。
+    response:
+        Agent 返回的文本。
+    turn_type:
+        回合类型。
+    score:
+        仅 EVALUATION 回合有值。
+    metadata:
+        来自 Turn.metadata 的原始元数据（包含 question_id、
+        ground_truth、evidence、eval_mode 等数据层信息）。
+    message_trace:
+        该轮对话的 message id 追踪记录。
+    depends_on_turn_indices:
+        当前回合（通常是评估回合）依赖的前序回合索引列表。
+    dependency_policy:
+        依赖生成策略标识（如 ``"ref"``、``"subtest_prefix_fallback"``）。
+    """
 
     turn_index: int
     user_input: str
     response: str
     turn_type: TurnType = TurnType.CONVERSATION
     score: Optional[TurnScore] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    message_trace: Optional[MessageTrace] = None
+    depends_on_turn_indices: list[int] = Field(default_factory=list)
+    dependency_policy: str = ""
 
 
-@dataclass
-class ScenarioResult:
+class PreloadHistoryEntry(BaseModel):
+    """预置历史条目的导出表示。"""
+
+    user_message: str
+    assistant_response: str
+
+
+class ScenarioResult(BaseModel):
     """单个场景的完整运行结果。
 
     对于脚本化场景，评分体现在各 ``TurnResult.score`` 中。
     对于交互式场景，评分体现在 ``scenario_score`` 中。
+
+    Attributes
+    ----------
+    scenario_id:
+        场景唯一标识。
+    scenario_description:
+        场景描述。
+    turn_results:
+        所有回合的运行记录。
+    scenario_score:
+        交互式场景的事后评估结果。
+    metadata:
+        场景级别的元数据。
+    preload_history:
+        预置历史条目。
+    memory_library_id:
+        场景运行时使用的记忆库标识。
     """
 
     scenario_id: str
     scenario_description: str = ""
-    turn_results: list[TurnResult] = field(default_factory=list)
+    turn_results: list[TurnResult] = Field(default_factory=list)
     scenario_score: Optional[ScenarioScore] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    preload_history: list[PreloadHistoryEntry] = Field(default_factory=list)
+    memory_library_id: str = ""
 
     @property
     def eval_scores(self) -> list[TurnScore]:
@@ -204,8 +291,7 @@ class ScenarioResult:
         return sum(1 for s in self.eval_scores if s.passed)
 
 
-@dataclass
-class AggregateResult:
+class AggregateResult(BaseModel):
     """Benchmark 聚合结果（固定结构）。
 
     由 Benchmark 实现者在 :meth:`~BenchmarkLite.aggregate` 中填充。
@@ -239,16 +325,58 @@ class AggregateResult:
     total: int
     passed: int
     detail: str = ""
-    extra: dict[str, Any] = field(default_factory=dict)
+    extra: dict[str, Any] = Field(default_factory=dict)
 
 
-@dataclass
-class BenchmarkResult:
-    """完整的 Benchmark 运行结果。"""
+class RunConfig(BaseModel):
+    """运行配置快照，记录 benchmark 的启动参数和环境。
+
+    Attributes
+    ----------
+    memory_type:
+        使用的 Memory 后端名称。
+    model:
+        Agent 使用的 LLM 模型名称。
+    eval_model:
+        评分使用的 LLM 模型名称。
+    system_prompt:
+        Agent 的系统提示词。
+    extra:
+        其他 CLI 参数或运行配置。
+    """
+
+    memory_type: str = ""
+    model: str = ""
+    eval_model: str = ""
+    system_prompt: str = ""
+    extra: dict[str, Any] = Field(default_factory=dict)
+
+
+class BenchmarkResult(BaseModel):
+    """完整的 Benchmark 运行结果。
+
+    Attributes
+    ----------
+    benchmark_name:
+        Benchmark 名称。
+    agent_identifier:
+        Agent 标识符。
+    scenario_results:
+        所有场景的运行结果。
+    aggregate:
+        汇总评分。
+    timestamp:
+        运行时间戳（ISO 8601）。
+    metadata:
+        额外的运行级元数据。
+    run_config:
+        运行配置快照。
+    """
 
     benchmark_name: str
     agent_identifier: str
     scenario_results: list[ScenarioResult]
     aggregate: AggregateResult
     timestamp: str
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    run_config: Optional[RunConfig] = None

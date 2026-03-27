@@ -53,6 +53,8 @@ flowchart LR
 | 接入一个新的记忆系统（如你自己的向量数据库） | [guide-memory.md](guide-memory.md) |
 | 把已有的数据集接入框架跑评测 | [guide-benchmark-data.md](guide-benchmark-data.md) |
 | 需要自定义对话调度或评分逻辑 | [guide-benchmark-lite.md](guide-benchmark-lite.md) |
+| 理解结果 JSON 的 Pydantic 模型 / 对接分析工具 | [guide-benchmark-lite.md > 结果 Pydantic 模型](guide-benchmark-lite.md#结果-pydantic-模型) |
+| 在 Memory 实现中提供真实 Message ID | [guide-memory.md > Message ID 追踪协议](guide-memory.md#message-id-追踪协议) |
 
 ## 快速开始
 

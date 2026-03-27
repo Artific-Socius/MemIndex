@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Optional, Type
 
 from .llm.base import LLMMixin
-from .memory.base import MemoryMixin
+from .memory.base import MemoryMixin, TurnTrace
 
 
 class Agent(LLMMixin, MemoryMixin):
@@ -36,6 +36,7 @@ class Agent(LLMMixin, MemoryMixin):
     def __init__(self, agent_tag: str = "", **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._agent_tag = agent_tag
+        self._last_turn_trace: Optional[TurnTrace] = None
 
     # ------------------------------------------------------------------
     # 核心对话循环
@@ -46,15 +47,32 @@ class Agent(LLMMixin, MemoryMixin):
 
         处理流程::
 
-            1. memory.get_messages(user_input)   → 构建上下文
-            2. llm.generate(messages)             → LLM 生成回复
-            3. memory.add_response(response)      → 持久化回复
-            4. 返回回复文本
+            1. memory._init_turn_trace()         → 初始化追踪
+            2. memory.get_messages(user_input)    → 构建上下文
+            3. llm.generate(messages)             → LLM 生成回复
+            4. memory.add_response(response)      → 持久化回复
+            5. memory.get_last_turn_trace()       → 采集追踪
+            6. 返回回复文本
         """
+        self._init_turn_trace()
         messages = self.get_messages(user_input)
         response = self.generate(messages)
         self.add_response(response)
+        self._last_turn_trace = self.get_last_turn_trace()
         return response
+
+    @property
+    def last_turn_trace(self) -> Optional[TurnTrace]:
+        """最近一次 :meth:`chat` 调用产生的 message id 追踪记录。
+
+        Runner 在每轮 chat 后读取此属性，写入 TurnResult。
+        """
+        return self._last_turn_trace
+
+    @property
+    def memory_library_id(self) -> str:
+        """当前 memory backend 的库标识（由 MemoryMixin 提供）。"""
+        return self.get_memory_library_id()
 
     # ------------------------------------------------------------------
     # 标识符

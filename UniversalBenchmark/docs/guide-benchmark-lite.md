@@ -187,10 +187,13 @@ class MyEvaluator(BaseEvaluator):
 
 | 结构 | 字段 | 用途 |
 |------|------|------|
-| `TurnScore` | `score`, `passed`, `detail` | 单轮评分 |
-| `TurnResult` | `turn_index`, `user_input`, `response`, `score` | 单轮运行记录 |
-| `ScenarioResult` | `scenario_id`, `turn_results`, `scenario_score` | 场景运行记录 |
-| `AggregateResult` | `score`, `total`, `passed`, `total_score`, `total_max_score` | 最终汇总 |
+| `TurnScore` | `score`, `passed`, `detail`, `metadata` | 单轮评分 |
+| `TurnResult` | `turn_index`, `user_input`, `response`, `score`, `metadata`, `message_trace`, `depends_on_turn_indices`, `dependency_policy` | 单轮运行记录 |
+| `ScenarioResult` | `scenario_id`, `turn_results`, `scenario_score`, `metadata`, `preload_history`, `memory_library_id` | 场景运行记录 |
+| `AggregateResult` | `score`, `total`, `passed`, `total_score`, `total_max_score`, `extra` | 最终汇总 |
+| `MessageTrace` | `user_message_id`, `assistant_message_id`, `id_source`, `query_request_id`, `append_request_id` | 消息追踪 |
+| `RunConfig` | `memory_type`, `model`, `eval_model`, `system_prompt`, `extra` | 运行配置快照 |
+| `BenchmarkResult` | `benchmark_name`, `agent_identifier`, `scenario_results`, `aggregate`, `timestamp`, `run_config` | 完整结果 |
 
 ### Runner 执行流程
 
@@ -218,6 +221,132 @@ flowchart TD
     IEval --> ForEach
     ForEach -->|全部完成| Agg["benchmark.aggregate()"]
     Agg --> Result[BenchmarkResult]
+```
+
+## 结果 Pydantic 模型
+
+所有输出侧数据结构定义在 `benchmark_lite/types.py` 中，均为 Pydantic `BaseModel`。你可以直接导入这些类型来解析 benchmark 输出的 JSON 文件，或者在自己的分析工具中使用它们做类型校验。
+
+```python
+from benchmark_lite.types import BenchmarkResult
+
+# 从 JSON 文件加载结果
+import json
+with open("results.json") as f:
+    data = json.load(f)
+result = BenchmarkResult.model_validate(data)
+
+# 遍历每个场景的每个回合
+for sr in result.scenario_results:
+    for tr in sr.turn_results:
+        print(f"Turn {tr.turn_index}: {tr.user_input[:50]}...")
+        if tr.message_trace:
+            print(f"  user_msg_id: {tr.message_trace.user_message_id}")
+            print(f"  id_source:   {tr.message_trace.id_source}")
+        if tr.score:
+            print(f"  score: {tr.score.score}, passed: {tr.score.passed}")
+```
+
+### 完整模型结构
+
+```
+BenchmarkResult
+├── benchmark_name: str
+├── agent_identifier: str
+├── timestamp: str
+├── metadata: dict
+│   └── scenario_memory_library_ids?: dict[scenario_id, memory_library_id]
+├── run_config: RunConfig?
+│   ├── memory_type: str
+│   ├── model: str
+│   ├── eval_model: str
+│   ├── system_prompt: str
+│   └── extra: dict
+├── aggregate: AggregateResult
+│   ├── score: float
+│   ├── total_score: float
+│   ├── total_max_score: float
+│   ├── total: int
+│   ├── passed: int
+│   ├── detail: str
+│   └── extra: dict
+└── scenario_results: list[ScenarioResult]
+    ├── scenario_id: str
+    ├── scenario_description: str
+    ├── metadata: dict
+    ├── preload_history: list[PreloadHistoryEntry]
+    ├── memory_library_id: str
+    │   ├── user_message: str
+    │   └── assistant_response: str
+    ├── scenario_score: ScenarioScore?
+    │   ├── score: float
+    │   ├── passed: bool
+    │   ├── detail: str
+    │   ├── metadata: dict
+    │   └── turn_annotations: list[TurnAnnotation]
+    │       ├── turn_index: int
+    │       ├── label: str
+    │       └── score: TurnScore?
+    └── turn_results: list[TurnResult]
+        ├── turn_index: int
+        ├── user_input: str
+        ├── response: str
+        ├── turn_type: "conversation" | "evaluation"
+        ├── metadata: dict    ← 包含 question_id, ground_truth, evidence 等
+        ├── depends_on_turn_indices: list[int]
+        ├── dependency_policy: str
+        ├── score: TurnScore?
+        │   ├── score: float
+        │   ├── passed: bool
+        │   ├── detail: str
+        │   └── metadata: dict
+        └── message_trace: MessageTrace?
+            ├── user_message_id: str
+            ├── assistant_message_id: str
+            ├── id_source: "provider" | "framework"
+            ├── query_request_id: str
+            ├── append_request_id: str
+            └── extra: dict
+```
+
+### JSON 导出兼容性
+
+通过 `-o results.json` 导出的 JSON 保持与旧版本的兼容——所有原有顶层键（`benchmark_name`、`agent_identifier`、`timestamp`、`aggregate`、`metadata`、`scenarios`）不变，新增的字段以追加方式出现：
+
+| 新增字段 | 位置 | 说明 |
+|----------|------|------|
+| `run_config` | 顶层 | 运行配置快照 |
+| `metadata.scenario_memory_library_ids` | 顶层 | 每个场景使用的记忆库 id 映射 |
+| `metadata` | scenario 级 | 场景元数据（task_type、source_benchmark 等） |
+| `preload_history` | scenario 级 | 预置历史条目 |
+| `memory_library_id` | scenario 级 | 该场景运行时使用的记忆库 id |
+| `metadata` | turn 级 | 来自 Turn.metadata 的原始元数据 |
+| `message_trace` | turn 级 | 消息 id 追踪 |
+| `depends_on_turn_indices` | turn 级 | 评估回合依赖的前序 turn 索引 |
+| `dependency_policy` | turn 级 | 依赖生成策略（如 `ref` / `subtest_prefix_fallback`） |
+
+### 在分析工具中使用
+
+记忆提供者可以将结果 JSON 载入为 Pydantic 模型后，轻松构建自己的分析管线：
+
+```python
+from benchmark_lite.types import BenchmarkResult, TurnResult
+
+result = BenchmarkResult.model_validate_json(open("results.json").read())
+
+# 提取所有 provider message id（仅限实现了真实 id 的后端）
+provider_ids = [
+    (tr.message_trace.user_message_id, tr.message_trace.assistant_message_id)
+    for sr in result.scenario_results
+    for tr in sr.turn_results
+    if tr.message_trace and tr.message_trace.id_source == "provider"
+]
+
+# 按场景统计通过率
+for sr in result.scenario_results:
+    total = sr.eval_count
+    passed = sr.passed_count
+    print(f"场景 {sr.scenario_id}: {passed}/{total} 通过")
 ```
 
 ## 文件组织

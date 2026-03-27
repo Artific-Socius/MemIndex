@@ -165,35 +165,34 @@ def _format_aggregate(agg: AggregateResult, lines: list[str]) -> None:
 # ── 序列化 ──────────────────────────────────────────────────────
 
 
-def _aggregate_to_dict(agg: AggregateResult) -> dict[str, Any]:
-    """将 AggregateResult 序列化为 dict。"""
-    d: dict[str, Any] = {
-        "score": agg.score,
-        "total_score": agg.total_score,
-        "total_max_score": agg.total_max_score,
-        "total": agg.total,
-        "passed": agg.passed,
-    }
-    if agg.detail:
-        d["detail"] = agg.detail
-    if agg.extra:
-        d["extra"] = agg.extra
-    return d
-
-
 def to_dict(result: BenchmarkResult) -> dict[str, Any]:
-    """将 BenchmarkResult 转换为可序列化的 dict。"""
-    return {
-        "benchmark_name": result.benchmark_name,
-        "agent_identifier": result.agent_identifier,
-        "timestamp": result.timestamp,
-        "aggregate": _aggregate_to_dict(result.aggregate),
-        "metadata": result.metadata,
-        "scenarios": [
-            _scenario_result_to_dict(sr)
-            for sr in result.scenario_results
-        ],
+    """将 BenchmarkResult 转换为可序列化的 dict。
+
+    保持与旧版 JSON 结构的兼容性（``benchmark_name``、
+    ``agent_identifier``、``timestamp``、``aggregate``、
+    ``metadata``、``scenarios`` 顶层键不变），同时追加新字段。
+    """
+    raw = result.model_dump(mode="python")
+
+    scenarios_raw = raw.pop("scenario_results", [])
+    scenarios_out: list[dict[str, Any]] = []
+    for sr in scenarios_raw:
+        out = _compat_scenario_dict(sr)
+        scenarios_out.append(out)
+
+    d: dict[str, Any] = {
+        "benchmark_name": raw["benchmark_name"],
+        "agent_identifier": raw["agent_identifier"],
+        "timestamp": raw["timestamp"],
+        "aggregate": _compat_aggregate_dict(raw["aggregate"]),
+        "metadata": raw.get("metadata") or {},
+        "scenarios": scenarios_out,
     }
+
+    if raw.get("run_config"):
+        d["run_config"] = raw["run_config"]
+
+    return d
 
 
 def to_json(result: BenchmarkResult, *, indent: int = 2) -> str:
@@ -201,60 +200,93 @@ def to_json(result: BenchmarkResult, *, indent: int = 2) -> str:
     return json.dumps(to_dict(result), indent=indent, ensure_ascii=False)
 
 
-# ── 工具 ────────────────────────────────────────────────────────
+# ── 兼容性辅助 ──────────────────────────────────────────────────
 
 
-def _scenario_result_to_dict(sr: Any) -> dict[str, Any]:
-    """将单个 ScenarioResult 转换为 dict。"""
+def _compat_aggregate_dict(agg: dict[str, Any]) -> dict[str, Any]:
+    """保持旧版 aggregate 键名，省略空 detail。"""
     d: dict[str, Any] = {
-        "id": sr.scenario_id,
-        "description": sr.scenario_description,
-        "turns": [
-            {
-                "index": tr.turn_index,
-                "type": tr.turn_type.value,
-                "user_input": tr.user_input,
-                "response": tr.response,
-                "score": (
-                    _score_to_dict(tr.score)
-                    if tr.score
-                    else None
-                ),
-            }
-            for tr in sr.turn_results
-        ],
+        "score": agg["score"],
+        "total_score": agg["total_score"],
+        "total_max_score": agg["total_max_score"],
+        "total": agg["total"],
+        "passed": agg["passed"],
+    }
+    if agg.get("detail"):
+        d["detail"] = agg["detail"]
+    if agg.get("extra"):
+        d["extra"] = agg["extra"]
+    return d
+
+
+def _compat_scenario_dict(sr: dict[str, Any]) -> dict[str, Any]:
+    """保持旧版 scenario 键名（id, description, turns），追加新字段。"""
+    turns_out: list[dict[str, Any]] = []
+    for tr in sr.get("turn_results", []):
+        raw_type = tr["turn_type"]
+        type_str = raw_type.value if hasattr(raw_type, "value") else str(raw_type)
+        turn_d: dict[str, Any] = {
+            "index": tr["turn_index"],
+            "type": type_str,
+            "user_input": tr["user_input"],
+            "response": tr["response"],
+            "score": _compat_score_dict(tr["score"]) if tr.get("score") else None,
+        }
+        if tr.get("metadata"):
+            turn_d["metadata"] = tr["metadata"]
+        if tr.get("message_trace"):
+            turn_d["message_trace"] = tr["message_trace"]
+        if tr.get("depends_on_turn_indices"):
+            turn_d["depends_on_turn_indices"] = tr["depends_on_turn_indices"]
+        if tr.get("dependency_policy"):
+            turn_d["dependency_policy"] = tr["dependency_policy"]
+        turns_out.append(turn_d)
+
+    d: dict[str, Any] = {
+        "id": sr["scenario_id"],
+        "description": sr.get("scenario_description", ""),
+        "turns": turns_out,
     }
 
-    if sr.scenario_score is not None:
-        ss = sr.scenario_score
+    if sr.get("scenario_score"):
+        ss = sr["scenario_score"]
         d["scenario_score"] = {
-            "score": ss.score,
-            "passed": ss.passed,
-            "detail": ss.detail,
-            "metadata": ss.metadata,
+            "score": ss["score"],
+            "passed": ss["passed"],
+            "detail": ss.get("detail", ""),
+            "metadata": ss.get("metadata", {}),
             "turn_annotations": [
                 {
-                    "turn_index": ann.turn_index,
-                    "label": ann.label,
+                    "turn_index": ann["turn_index"],
+                    "label": ann["label"],
                     "score": (
-                        _score_to_dict(ann.score)
-                        if ann.score
+                        _compat_score_dict(ann["score"])
+                        if ann.get("score")
                         else None
                     ),
                 }
-                for ann in ss.turn_annotations
+                for ann in ss.get("turn_annotations", [])
             ],
         }
+
+    if sr.get("metadata"):
+        d["metadata"] = sr["metadata"]
+    if sr.get("preload_history"):
+        d["preload_history"] = sr["preload_history"]
+    if sr.get("memory_library_id"):
+        d["memory_library_id"] = sr["memory_library_id"]
 
     return d
 
 
-def _score_to_dict(score: Any) -> dict[str, Any]:
+def _compat_score_dict(score: dict[str, Any] | None) -> dict[str, Any] | None:
+    if score is None:
+        return None
     return {
-        "score": score.score,
-        "passed": score.passed,
-        "detail": score.detail,
-        "metadata": score.metadata,
+        "score": score["score"],
+        "passed": score["passed"],
+        "detail": score.get("detail", ""),
+        "metadata": score.get("metadata", {}),
     }
 
 

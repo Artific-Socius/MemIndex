@@ -1,9 +1,46 @@
 from __future__ import annotations
 
+import uuid
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from loguru import logger
+
+
+@dataclass
+class TurnTrace:
+    """一轮对话的 message id 与 request id 追踪记录。
+
+    Memory 实现者可以通过覆写 :meth:`MemoryMixin.get_last_turn_trace`
+    提供来自后端的真实 message id。未覆写时框架自动生成 UUID 兜底。
+
+    一轮对话通常包含两次请求：查询（``get_messages``）和追加
+    （``add_response``），每次请求可以有独立的 request id。
+
+    Attributes
+    ----------
+    user_message_id:
+        用户消息的唯一标识。
+    assistant_message_id:
+        助手消息的唯一标识（在 ``add_response`` 后填充）。
+    id_source:
+        ``"provider"`` 表示 Memory 后端提供的真实 id，
+        ``"framework"`` 表示框架自动生成的 UUID。
+    query_request_id:
+        查询请求（``get_messages``）的 request id。
+    append_request_id:
+        追加请求（``add_response``）的 request id。
+    extra:
+        其他追踪信息。
+    """
+
+    user_message_id: str = ""
+    assistant_message_id: str = ""
+    id_source: str = "framework"
+    query_request_id: str = ""
+    append_request_id: str = ""
+    extra: dict[str, Any] = field(default_factory=dict)
 
 
 class MemoryMixin(ABC):
@@ -32,6 +69,8 @@ class MemoryMixin(ABC):
         super().__init__(**kwargs)
         self._system_prompt = system_prompt
         self._memory_tag = memory_tag
+        self._current_turn_trace: Optional[TurnTrace] = None
+        self._framework_memory_library_id = f"framework-{uuid.uuid4()}"
 
     # ------------------------------------------------------------------
     # 抽象接口 - 每个具体 Memory 子类必须实现
@@ -64,6 +103,78 @@ class MemoryMixin(ABC):
     def reset(self) -> None:
         """清空所有对话历史，保留配置。"""
         ...
+
+    # ------------------------------------------------------------------
+    # Message ID 追踪 - Memory 实现者可覆写以提供真实 ID
+    # ------------------------------------------------------------------
+
+    def get_last_turn_trace(self) -> TurnTrace:
+        """返回最近一轮对话的 message id 追踪记录。
+
+        **默认行为**：返回框架自动生成的 UUID 兜底 trace。
+
+        **Memory 实现者**可覆写此方法以返回来自后端的真实 id。
+        例如 Memecho 可从服务端的 query/append 响应中提取真实
+        message id 并在此返回。
+
+        框架会在每次 ``get_messages`` 调用前自动初始化一个
+        包含 UUID 的 trace（:attr:`_current_turn_trace`）。
+        如果 Memory 后端提供了真实 id，实现者应在
+        ``get_messages`` / ``add_response`` 内部更新该 trace，
+        或直接覆写本方法。
+
+        Returns
+        -------
+        TurnTrace
+            当前轮次的追踪记录。
+        """
+        if self._current_turn_trace is not None:
+            return self._current_turn_trace
+        return TurnTrace(
+            user_message_id=str(uuid.uuid4()),
+            assistant_message_id=str(uuid.uuid4()),
+            id_source="framework",
+        )
+
+    def _init_turn_trace(self) -> TurnTrace:
+        """框架内部方法：在每轮 get_messages 前初始化 UUID 兜底 trace。
+
+        Memory 子类在 ``get_messages`` 内部可通过修改
+        ``self._current_turn_trace`` 来覆盖 id 来源。
+        """
+        self._current_turn_trace = TurnTrace(
+            user_message_id=str(uuid.uuid4()),
+            assistant_message_id=str(uuid.uuid4()),
+            id_source="framework",
+        )
+        return self._current_turn_trace
+
+    def _finalize_turn_trace(self, assistant_message_id: str = "") -> None:
+        """框架内部方法：在 add_response 后更新 assistant id。
+
+        如果 Memory 子类已在 add_response 中设置了真实的
+        assistant_message_id，则本方法不会覆盖。
+        """
+        if self._current_turn_trace is None:
+            return
+        if assistant_message_id and not self._current_turn_trace.assistant_message_id:
+            self._current_turn_trace.assistant_message_id = assistant_message_id
+
+    # ------------------------------------------------------------------
+    # 记忆库 ID 追踪 - 默认实现 + 可覆写
+    # ------------------------------------------------------------------
+
+    def ensure_memory_library(self) -> str:
+        """确保存在可用记忆库并返回其 ID。
+
+        默认实现返回框架级的稳定 fallback id。长期记忆后端
+        （如 Memecho/Mem0）应覆写此方法并返回后端真实 id。
+        """
+        return self._framework_memory_library_id
+
+    def get_memory_library_id(self) -> str:
+        """获取当前使用的记忆库 ID。默认调用 ensure_memory_library。"""
+        return self.ensure_memory_library()
 
     # ------------------------------------------------------------------
     # 通用工具方法 - 所有子类可直接使用

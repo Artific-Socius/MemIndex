@@ -18,12 +18,56 @@ from agent import Agent
 from .base import BenchmarkLite, InteractiveScenario
 from .types import (
     BenchmarkResult,
+    MessageTrace,
+    PreloadHistoryEntry,
     Scenario,
     ScenarioResult,
     ScenarioScore,
     TurnResult,
     TurnType,
 )
+
+
+def _trace_from_agent(agent: Agent) -> Optional[MessageTrace]:
+    """从 Agent 的 last_turn_trace 构建 MessageTrace（Pydantic 模型）。"""
+    raw = getattr(agent, "last_turn_trace", None)
+    if raw is None:
+        return None
+    return MessageTrace(
+        user_message_id=raw.user_message_id,
+        assistant_message_id=raw.assistant_message_id,
+        id_source=raw.id_source,
+        query_request_id=raw.query_request_id,
+        append_request_id=raw.append_request_id,
+        extra=dict(raw.extra) if raw.extra else {},
+    )
+
+
+def _memory_library_id_from_agent(agent: Agent) -> str:
+    """安全获取当前 memory library id。"""
+    try:
+        return agent.memory_library_id
+    except Exception:
+        return ""
+
+
+def _dependency_from_turn_meta(
+    meta: dict[str, object],
+) -> tuple[list[int], str]:
+    """从 Turn.metadata 提取依赖字段。"""
+    raw_indices = (
+        meta.get("depends_on_turn_indices")
+        or meta.get("dependency_turn_indices")
+        or []
+    )
+    depends_on_turn_indices: list[int] = []
+    if isinstance(raw_indices, list):
+        for idx in raw_indices:
+            if isinstance(idx, int):
+                depends_on_turn_indices.append(idx)
+    policy = meta.get("dependency_policy", "")
+    dependency_policy = policy if isinstance(policy, str) else ""
+    return depends_on_turn_indices, dependency_policy
 
 
 class Runner:
@@ -64,6 +108,7 @@ class Runner:
         """
         scenarios = list(benchmark.get_scenarios())
         scenario_results: list[ScenarioResult] = []
+        scenario_memory_library_ids: dict[str, str] = {}
 
         if self._verbose:
             logger.info(
@@ -101,19 +146,26 @@ class Runner:
                 )
 
             scenario_results.append(sr)
+            if sr.memory_library_id:
+                scenario_memory_library_ids[sid] = sr.memory_library_id
 
         aggregate = benchmark.aggregate(scenario_results)
 
         if self._verbose:
             logger.info(f"Benchmark 完成: {aggregate}")
 
-        return BenchmarkResult(
+        result = BenchmarkResult(
             benchmark_name=benchmark.name,
             agent_identifier=agent.identifier,
             scenario_results=scenario_results,
             aggregate=aggregate,
             timestamp=datetime.datetime.now().isoformat(),
         )
+        if scenario_memory_library_ids:
+            result.metadata["scenario_memory_library_ids"] = (
+                scenario_memory_library_ids
+            )
+        return result
 
     # ------------------------------------------------------------------
     # 智能上下文导入
@@ -167,6 +219,10 @@ class Runner:
         for ti, turn in enumerate(scenario.turns):
             response = agent.chat(turn.user_input)
 
+            trace = _trace_from_agent(agent)
+            turn_meta = dict(turn.metadata) if turn.metadata else {}
+            deps, dep_policy = _dependency_from_turn_meta(turn_meta)
+
             score = None
             if turn.turn_type == TurnType.EVALUATION:
                 score = benchmark.evaluate(turn, response, turn_results)
@@ -185,16 +241,31 @@ class Runner:
                 response=response,
                 turn_type=turn.turn_type,
                 score=score,
+                metadata=turn_meta,
+                message_trace=trace,
+                depends_on_turn_indices=deps,
+                dependency_policy=dep_policy,
             )
             turn_results.append(result)
 
             if on_turn_complete:
                 on_turn_complete(scenario, result)
 
+        preload = [
+            PreloadHistoryEntry(
+                user_message=h.user_message,
+                assistant_response=h.assistant_response,
+            )
+            for h in scenario.preload_history
+        ]
+
         return ScenarioResult(
             scenario_id=scenario.id,
             scenario_description=scenario.description,
             turn_results=turn_results,
+            metadata=dict(scenario.metadata) if scenario.metadata else {},
+            preload_history=preload,
+            memory_library_id=_memory_library_id_from_agent(agent),
         )
 
     # ------------------------------------------------------------------
@@ -218,6 +289,9 @@ class Runner:
                 break
 
             response = agent.chat(turn.user_input)
+            trace = _trace_from_agent(agent)
+            turn_meta = dict(turn.metadata) if turn.metadata else {}
+            deps, dep_policy = _dependency_from_turn_meta(turn_meta)
 
             if self._verbose:
                 tag = turn.turn_type.value.upper()[:4]
@@ -228,6 +302,10 @@ class Runner:
                 user_input=turn.user_input,
                 response=response,
                 turn_type=turn.turn_type,
+                metadata=turn_meta,
+                message_trace=trace,
+                depends_on_turn_indices=deps,
+                dependency_policy=dep_policy,
             )
             turn_results.append(result)
 
@@ -238,6 +316,19 @@ class Runner:
 
         # 事后评估
         scenario_score: ScenarioScore = scenario.evaluate(turn_results)
+        ann_score_map = {
+            ann.turn_index: ann.score
+            for ann in scenario_score.turn_annotations
+            if ann.label == "evaluation"
+        }
+        for tr in turn_results:
+            if tr.turn_type != TurnType.EVALUATION or tr.score is not None:
+                continue
+            ann_score = ann_score_map.get(tr.turn_index)
+            if ann_score is not None:
+                tr.score = ann_score
+            else:
+                tr.metadata["score_backfill_status"] = "missing_annotation_score"
 
         if self._verbose:
             status = "PASS" if scenario_score.passed else "FAIL"
@@ -258,4 +349,6 @@ class Runner:
             scenario_description=scenario.description,
             turn_results=turn_results,
             scenario_score=scenario_score,
+            metadata=dict(scenario.metadata) if scenario.metadata else {},
+            memory_library_id=_memory_library_id_from_agent(agent),
         )
