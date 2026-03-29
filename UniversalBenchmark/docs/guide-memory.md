@@ -76,6 +76,27 @@ def get_memory_library_id(self) -> str:
     """返回当前记忆库 id（默认调用 ensure_memory_library）。"""
 ```
 
+### 批量导入与进度
+
+默认 `MemoryMixin.bulk_import` 在逐条导入时会通过全局进度 API（`get_progress()`）更新任务条；仅在入口已启用 `progress_context`（例如 `run_benchmark_lite.py` 在 TTY 下）时可见，否则为 no-op。
+
+自定义 Memory 若在长耗时循环中需要展示进度，请：
+
+```python
+from agent.progress import get_progress
+
+pg = get_progress()
+h = pg.add_task("我的导入", total=100.0)
+try:
+    for i in range(100):
+        ...
+        pg.advance(h, 1)
+finally:
+    pg.remove_task(h)
+```
+
+不要自行创建多个 `rich.progress.Progress` / `Console` 作为全局显示，以免与框架冲突。
+
 ## 最小实现示例
 
 一个只保留最近 N 条消息的简易记忆：
@@ -150,6 +171,25 @@ memory:
 | 第三层 | 具体运行标识 | 否 | `zhangsan/EverMemBench/run1` |
 
 不配置此项将无法在服务端区分你的请求日志。首次使用请复制 `env_config.yaml.example` 为 `env_config.yaml` 并修改。
+
+### 模拟导入模式（可选）
+
+默认情况下，`MemechoMemory.import_corpus()` 使用服务端 `import_file_fast`，`bulk_import()` 使用 `memory_import_fast`。若你希望**不走原生 fast 导入**，而是把多篇文档按 **token 上限** 聚合成更少条用户消息，再逐条通过普通 **`/memory/query` + `/memory/append-assistant-message`** 写入记忆（助手回复固定为一句，**不经过 LLM**），可在 `env_config.yaml` 的 `memory.memecho` 下设置：
+
+```yaml
+memory:
+  memecho:
+    custom_headers:
+      X-Mark: your_name/benchmark_name/run_id
+    use_simulated_import: true
+    simulated_import_max_tokens: 5000   # 每条用户消息最大 token 数，默认 5000
+    simulated_import_ack_text: "Copy that."   # 每轮 append 的固定助手文本
+```
+
+行为说明：
+
+- **`import_corpus`**：多文档先按 `simulated_import_max_tokens` 合并/切分，再对每个块执行 `get_messages` + `add_response(simulated_import_ack_text)`。
+- **`bulk_import`**：对每条 `(user, assistant)` 只使用 **user** 文本执行 `get_messages` + `add_response(simulated_import_ack_text)`，**忽略**原 `assistant` 内容（与「特殊导入」语义一致）。
 
 ## Message ID 追踪协议
 

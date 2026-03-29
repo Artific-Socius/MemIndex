@@ -6,6 +6,7 @@
 
 import os
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 from dotenv import load_dotenv
@@ -41,6 +42,9 @@ class TestMemechoMemoryUnit:
         assert mem._include_user_query is True
         assert mem._read_only is False
         assert mem._max_retries == 3
+        assert mem._use_simulated_import is False
+        assert mem._simulated_import_max_tokens == 5000
+        assert mem._simulated_import_ack_text == "Copy that."
 
     def test_init_custom_params(self) -> None:
         """自定义参数应正确传入。"""
@@ -101,6 +105,106 @@ class TestMemechoMemoryUnit:
         )
         mem.reset()
         assert mem.system_prompt == "你是助手"
+
+
+class TestMemechoSimulatedImport:
+    """模拟导入：token 分块与 query+append 路径（mock HTTP）。"""
+
+    def test_merge_documents_by_tokens_respects_limit(self) -> None:
+        mem = MemechoMemory(
+            api_key="fake",
+            memory_lib_id="lib1",
+            simulated_import_max_tokens=8,
+        )
+        long = "word " * 50
+        chunks = mem._merge_documents_by_tokens([long], 8)
+        assert len(chunks) >= 2
+        for c in chunks:
+            assert len(mem.encoding.encode(c)) <= 8
+
+    def test_import_corpus_simulated_skips_native_import(self) -> None:
+        mem = MemechoMemory(
+            api_key="fake",
+            memory_lib_id="lib1",
+            use_simulated_import=True,
+            simulated_import_max_tokens=500,
+        )
+
+        def _req(
+            method: str,
+            path: str,
+            *,
+            json: Any = None,
+            timeout: int = 60,
+            extra_headers: Any = None,
+        ) -> dict[str, Any]:
+            if "/memory/query" in path:
+                return {"ready_messages": [], "user_message_id": ""}
+            if "/memory/append-assistant-message" in path:
+                return {"assistant_message_id": ""}
+            return {}
+
+        append_payloads: list[dict[str, Any]] = []
+
+        def _capture(
+            method: str,
+            path: str,
+            *,
+            json: Any = None,
+            timeout: int = 60,
+            extra_headers: Any = None,
+        ) -> dict[str, Any]:
+            if "/memory/append-assistant-message" in path and json:
+                append_payloads.append(json)
+            return _req(method, path, json=json, timeout=timeout, extra_headers=extra_headers)
+
+        with patch.object(mem, "_request_with_retry", side_effect=_capture):
+            with patch.object(mem, "_import_file_fast") as mock_fast:
+                mem.import_corpus(["hello world", "second doc"])
+                mock_fast.assert_not_called()
+
+        assert append_payloads
+        for pl in append_payloads:
+            am = pl.get("assistant_message", {})
+            texts = [
+                c.get("text", "")
+                for c in am.get("content", [])
+                if c.get("type") == "text"
+            ]
+            assert "Copy that." in "".join(texts)
+
+    def test_bulk_import_simulated_uses_query_append_not_fast(self) -> None:
+        mem = MemechoMemory(
+            api_key="fake",
+            memory_lib_id="lib1",
+            use_simulated_import=True,
+            simulated_import_ack_text="Copy that.",
+        )
+        paths: list[str] = []
+        append_texts: list[str] = []
+
+        def _req(method: str, path: str, **kwargs: Any) -> dict[str, Any]:
+            paths.append(path)
+            j = kwargs.get("json") or {}
+            if "/memory/append-assistant-message" in path:
+                am = j.get("assistant_message", {})
+                for c in am.get("content", []):
+                    if c.get("type") == "text":
+                        append_texts.append(c.get("text", ""))
+                return {"assistant_message_id": ""}
+            if "/memory/query" in path:
+                q = j.get("query", {})
+                return {"ready_messages": [], "user_message_id": ""}
+            return {}
+
+        with patch.object(mem, "_request_with_retry", side_effect=_req):
+            with patch("agent.memory.memecho.requests.post") as mock_post:
+                n = mem.bulk_import([("user only", "ignored assistant")])
+                mock_post.assert_not_called()
+        assert n == 1
+        assert any("/memory/query" in p for p in paths)
+        assert any("/memory/append-assistant-message" in p for p in paths)
+        assert append_texts == ["Copy that."]
 
 
 # =====================================================================

@@ -32,6 +32,12 @@ memory:
       #   X-Mark: zhangsan/EverMemBench/run1
       X-Mark: your_name/benchmark_name/run_id
 
+    # 可选：不使用 Memecho 原生 fast 导入，改为按 token 上限聚合文档后
+    # 逐条走 query + append（助手固定一句，不调用 LLM）。
+    use_simulated_import: false
+    simulated_import_max_tokens: 5000
+    simulated_import_ack_text: "Copy that."
+
   # ── Buffer ─────────────────────────────────────────────────
   # buffer:
   #   max_turns: 50

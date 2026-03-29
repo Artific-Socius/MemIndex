@@ -32,6 +32,16 @@ from .adapter import UniversalAdapter
 from .base import AnyScenario, BenchmarkLite, InteractiveScenario
 from .report import format_report, to_dict, to_json
 from .runner import Runner
+
+# 全局 Rich 进度（与 agent.progress 同源，便于 Benchmark 开发者导入）
+from agent.progress import (  # noqa: E402
+    TaskHandle,
+    get_console,
+    get_progress,
+    loguru_sink_message,
+    progress_context,
+    track_task,
+)
 from .types import (
     AggregateResult,
     BenchmarkResult,
@@ -50,6 +60,13 @@ from .types import (
 )
 
 __all__ = [
+    # 进度（可选）
+    "TaskHandle",
+    "get_console",
+    "get_progress",
+    "loguru_sink_message",
+    "progress_context",
+    "track_task",
     # ABC
     "BenchmarkLite",
     "InteractiveScenario",

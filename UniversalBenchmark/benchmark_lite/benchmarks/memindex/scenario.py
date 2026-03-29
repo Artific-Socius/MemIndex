@@ -29,6 +29,8 @@ from typing import Optional
 import tiktoken
 from loguru import logger
 
+from agent.progress import TaskHandle, get_progress
+
 from benchmark_lite.base import InteractiveScenario
 from benchmark_lite.types import (
     ScenarioScore,
@@ -223,6 +225,10 @@ class MemIndexScenario(InteractiveScenario):
         )
         self._nonsense_tokens = max(20, int(dataset.memory_distance * 0.05))
 
+        # 全局 Rich 进度（与 Runner 共用 Progress；不 remove_task 以保留完成态）
+        self._mi_progress_handle: Optional[TaskHandle] = None
+        self._mi_total_steps: int = 1
+
     # ── InteractiveScenario 接口 ──────────────────────────────
 
     @property
@@ -238,14 +244,68 @@ class MemIndexScenario(InteractiveScenario):
         )
 
     def next_turn(self, history: list[TurnResult]) -> Optional[Turn]:
+        self._ensure_mi_progress_task()
+
         if history and self._pending:
             self._handle_result(history)
 
+        turn: Optional[Turn] = None
         if self._phase == "head":
-            return self._next_head(history)
-        if self._phase == "run":
-            return self._next_run(history)
-        return None
+            turn = self._next_head(history)
+        elif self._phase == "run":
+            turn = self._next_run(history)
+
+        if turn is None:
+            self._refresh_mi_progress(finished=True)
+        else:
+            self._refresh_mi_progress(finished=False)
+        return turn
+
+    def _ensure_mi_progress_task(self) -> None:
+        if self._mi_progress_handle is not None:
+            return
+        raw_total = (
+            len(self._dataset.head_prompts)
+            + sum(len(a.items) for a in self._actuators)
+        )
+        self._mi_total_steps = max(1, raw_total)
+        pg = get_progress()
+        self._mi_progress_handle = pg.add_task(
+            f"MemIndex · {self._scenario_id}",
+            total=float(self._mi_total_steps),
+            task_key=f"memindex:scenario:{self._scenario_id}",
+        )
+
+    def _mi_completed_steps(self) -> int:
+        if self._phase == "head":
+            return self._head_idx
+        return len(self._dataset.head_prompts) + sum(
+            a.cursor for a in self._actuators
+        )
+
+    def _refresh_mi_progress(self, *, finished: bool) -> None:
+        h = self._mi_progress_handle
+        if h is None:
+            return
+        pg = get_progress()
+        if finished:
+            pg.update(
+                h,
+                completed=float(self._mi_total_steps),
+                description=(
+                    f"MemIndex · {self._scenario_id} · 完成"
+                ),
+            )
+            return
+        done = min(self._mi_completed_steps(), self._mi_total_steps)
+        pg.update(
+            h,
+            completed=float(done),
+            description=(
+                f"MemIndex · {self._scenario_id} "
+                f"({done}/{self._mi_total_steps})"
+            ),
+        )
 
     def evaluate(self, history: list[TurnResult]) -> ScenarioScore:
         return self._compile_score(history)

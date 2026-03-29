@@ -195,6 +195,37 @@ class MyEvaluator(BaseEvaluator):
 | `RunConfig` | `memory_type`, `model`, `eval_model`, `system_prompt`, `extra` | 运行配置快照 |
 | `BenchmarkResult` | `benchmark_name`, `agent_identifier`, `scenario_results`, `aggregate`, `timestamp`, `run_config` | 完整结果 |
 
+### 全局 Rich 进度条
+
+框架在 **单一进程内** 只维护一个 Rich `Progress`（及关联 `Console`），避免多处各自 `Progress()` 导致渲染冲突。
+
+- **CLI**：`run_benchmark_lite.py` 在 stderr 为 TTY 且未传 `--no-progress` 时，自动 `with progress_context(): runner.run(...)`。`Runner` 会更新「场景总进度」「每场景回合」「语料/预置历史导入」等子任务；`Agent` 侧 LLM 与 Memory（含 Memecho 导入/SSE）也会向同一管理器追加任务。
+- **编程调用**：若你直接 `Runner().run(...)`，需要同样效果时请自行包裹：
+
+```python
+from agent.progress import progress_context
+from benchmark_lite import Runner
+
+with progress_context():
+    Runner().run(agent, benchmark)
+```
+
+- **Benchmark 开发者**：在 `get_scenarios`、`InteractiveScenario.next_turn` 或自定义预处理循环中，使用 `benchmark_lite` 或 `agent` 导出的 API：
+
+```python
+from benchmark_lite import get_progress
+
+pg = get_progress()
+h = pg.add_task("自定义阶段", total=None)
+try:
+    pg.update(h, description="处理中…")
+    ...
+finally:
+    pg.remove_task(h)
+```
+
+未开启 `progress_context` 时，`get_progress()` 返回 **no-op** 管理器，调用 `add_task` / `advance` 等无副作用。更多示例见 `benchmark_lite/examples/progress_demo.py`。
+
 ### Runner 执行流程
 
 ```mermaid

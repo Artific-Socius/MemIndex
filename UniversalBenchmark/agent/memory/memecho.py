@@ -11,6 +11,9 @@ from typing import Any, Optional
 import requests  # type: ignore[import-untyped]
 from loguru import logger
 import tiktoken
+
+from agent.progress import get_progress
+
 from .base import MemoryMixin, TurnTrace
 
 _DEFAULT_TIMEOUT = 60
@@ -42,6 +45,14 @@ class MemechoMemory(MemoryMixin):
         若为 *True*，query 端点不会持久化该条用户消息。
     max_retries:
         每个 HTTP 请求的最大重试次数。
+    use_simulated_import:
+        若为 *True*，语料与批量导入不走 Memecho 原生 fast 接口，
+        而是将文本按 token 上限聚合后，逐条走 ``query`` + ``append``，
+        助手回复固定为 ``simulated_import_ack_text``（不调用 LLM）。
+    simulated_import_max_tokens:
+        模拟导入时每条用户消息的最大 token 数（默认 5000）。
+    simulated_import_ack_text:
+        模拟导入时每轮 ``add_response`` 写入的固定文本（默认 ``Copy that.``）。
     """
 
     def __init__(
@@ -52,8 +63,11 @@ class MemechoMemory(MemoryMixin):
         memory_lib_id: Optional[str] = None,
         include_user_query: bool = True,
         read_only: bool = False,
-        max_retries: int = 3,
+        max_retries: int = 10,
         custom_headers: Optional[dict[str, str]] = None,
+        use_simulated_import: bool = False,
+        simulated_import_max_tokens: int = 5000,
+        simulated_import_ack_text: str = "Copy that.",
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -66,6 +80,9 @@ class MemechoMemory(MemoryMixin):
         self._custom_headers: dict[str, str] = dict(custom_headers) if custom_headers else {}
         self._persistent_lib: bool = memory_lib_id is not None
         self.encoding = tiktoken.get_encoding("cl100k_base")
+        self._use_simulated_import = bool(use_simulated_import)
+        self._simulated_import_max_tokens = max(1, int(simulated_import_max_tokens))
+        self._simulated_import_ack_text = str(simulated_import_ack_text)
 
     # ------------------------------------------------------------------
     # 初始化
@@ -99,6 +116,101 @@ class MemechoMemory(MemoryMixin):
     def get_memory_library_id(self) -> str:
         """返回当前 Memecho 记忆库 ID。"""
         return self.ensure_memory_library()
+
+    # ------------------------------------------------------------------
+    # 模拟导入：按 token 聚合 + query + append（不调用 LLM）
+    # ------------------------------------------------------------------
+
+    def _split_text_by_tokens(self, text: str, max_tokens: int) -> list[str]:
+        """将过长文本按 token 切分为多段（每段不超过 max_tokens）。"""
+        if max_tokens < 1:
+            max_tokens = 1
+        ids = self.encoding.encode(text)
+        if not ids:
+            return []
+        parts: list[str] = []
+        for i in range(0, len(ids), max_tokens):
+            chunk_ids = ids[i : i + max_tokens]
+            parts.append(self.encoding.decode(chunk_ids))
+        return parts
+
+    def _merge_documents_by_tokens(
+        self,
+        documents: list[str],
+        max_tokens: int,
+    ) -> list[str]:
+        """将多篇文档合并为若干条文本，每条 token 数不超过 max_tokens。"""
+        if max_tokens < 1:
+            max_tokens = 1
+        sep = "\n\n"
+        sep_tok = len(self.encoding.encode(sep))
+        chunks: list[str] = []
+        current_parts: list[str] = []
+        current_tok = 0
+
+        for doc in documents:
+            if not doc:
+                continue
+            doc_tok = len(self.encoding.encode(doc))
+            if doc_tok > max_tokens:
+                if current_parts:
+                    chunks.append(sep.join(current_parts))
+                    current_parts = []
+                    current_tok = 0
+                chunks.extend(self._split_text_by_tokens(doc, max_tokens))
+                continue
+
+            extra = sep_tok + doc_tok if current_parts else doc_tok
+            if current_tok + extra > max_tokens:
+                chunks.append(sep.join(current_parts))
+                current_parts = [doc]
+                current_tok = doc_tok
+            else:
+                current_parts.append(doc)
+                current_tok += extra
+
+        if current_parts:
+            chunks.append(sep.join(current_parts))
+        return chunks
+
+    def _simulated_import_text_chunks(self, chunks: list[str]) -> int:
+        """对每条聚合文本执行 query + 固定 append，返回写入轮次数。"""
+        ident = self.memory_identifier
+        ack = self._simulated_import_ack_text
+        count = 0
+        pg = get_progress()
+        nonempty = [c for c in chunks if c.strip()]
+        total_n = len(nonempty) if nonempty else 1
+        ph = pg.add_task(
+            f"[{ident}] 模拟导入",
+            total=float(total_n),
+            task_key="memecho:simulated_text_chunks",
+        )
+        try:
+            for i, chunk in enumerate(chunks):
+                if not chunk.strip():
+                    continue
+                logger.debug(
+                    f"[{ident}] 模拟导入 [{i + 1}/{len(chunks)}] "
+                    f"({len(self.encoding.encode(chunk))} tokens)"
+                )
+                pg.update(
+                    ph,
+                    description=(
+                        f"[{ident}] 模拟导入 "
+                        f"[{count + 1}/{total_n}]"
+                    ),
+                )
+                self.get_messages(chunk)
+                self.add_response(ack)
+                count += 1
+                pg.advance(ph, 1)
+            if not nonempty:
+                pg.advance(ph, 1)
+        finally:
+            pg.remove_task(ph)
+        logger.info(f"[{ident}] 模拟导入完成: {count} 轮 query+append")
+        return count
 
     # ------------------------------------------------------------------
     # MemoryMixin 接口实现
@@ -227,6 +339,33 @@ class MemechoMemory(MemoryMixin):
         self._ensure_initialized()
         ident = self.memory_identifier
 
+        if self._use_simulated_import:
+            logger.info(
+                f"[{ident}] 模拟批量导入: {len(conversations)} 条对话 "
+                f"(query+append，助手固定 {self._simulated_import_ack_text!r}，"
+                f"忽略每条中的 assistant 文本)"
+            )
+            pg = get_progress()
+            n_total = len(conversations)
+            turn_total = float(n_total) if n_total > 0 else 1.0
+            sh = pg.add_task(
+                f"[{ident}] 模拟 bulk_import",
+                total=turn_total,
+                task_key="memecho:simulated_bulk_import",
+            )
+            n = 0
+            try:
+                for user_input, _assistant in conversations:
+                    self.get_messages(user_input)
+                    self.add_response(self._simulated_import_ack_text)
+                    n += 1
+                    pg.advance(sh, 1)
+                if n_total == 0:
+                    pg.advance(sh, 1)
+            finally:
+                pg.remove_task(sh)
+            return n
+
         memories: list[dict[str, Any]] = []
         for user_input, assistant_response in conversations:
             memories.append({
@@ -288,48 +427,70 @@ class MemechoMemory(MemoryMixin):
         imported_count = 0
         last_stage = ""
 
+        pg = get_progress()
+        sse_h = pg.add_task(
+            f"[{ident}] memory_import_fast",
+            total=100.0,
+            task_key="memecho:memory_import_fast_sse",
+        )
         logger.debug(f"[{ident}] 等待 SSE 首事件...")
-        for line in resp.iter_lines(decode_unicode=True):
-            if not line or not line.startswith("data: "):
-                continue
+        try:
+            for line in resp.iter_lines(decode_unicode=True):
+                if not line or not line.startswith("data: "):
+                    continue
 
-            if arrived is not None and not arrived.is_set():
-                arrived.set()
+                if arrived is not None and not arrived.is_set():
+                    arrived.set()
 
-            try:
-                event: dict[str, Any] = json.loads(line[6:])
-            except json.JSONDecodeError:
-                continue
+                try:
+                    event: dict[str, Any] = json.loads(line[6:])
+                except json.JSONDecodeError:
+                    continue
 
-            event_type = event.get("type")
-            stage = event.get("stage", "")
-            message = event.get("message", "")
-            progress = event.get("progress", 0)
+                event_type = event.get("type")
+                stage = event.get("stage", "")
+                message = event.get("message", "")
+                raw_prog = event.get("progress", 0)
+                try:
+                    progress_f = float(raw_prog)
+                except (TypeError, ValueError):
+                    progress_f = 0.0
 
-            if event_type == "connected":
-                req_id = event.get("request_id", "")
-                logger.info(
-                    f"[{ident}] SSE 连接已建立 "
-                    f"(request_id={req_id})"
-                )
-            elif event_type == "progress":
-                if stage != last_stage or stage == "completed":
+                if event_type == "connected":
+                    req_id = event.get("request_id", "")
                     logger.info(
-                        f"[{ident}] [{stage}] "
-                        f"{message} ({progress:.0f}%)"
+                        f"[{ident}] SSE 连接已建立 "
+                        f"(request_id={req_id})"
                     )
-                    last_stage = stage
+                elif event_type == "progress":
+                    if stage != last_stage or stage == "completed":
+                        logger.info(
+                            f"[{ident}] [{stage}] "
+                            f"{message} ({progress_f:.0f}%)"
+                        )
+                        last_stage = stage
 
-                extra = event.get("extra_data")
-                if stage == "completed" and extra:
-                    msg_ids = extra.get("message_ids", [])
-                    elapsed = extra.get("elapsed_time", 0)
-                    imported_count = len(msg_ids)
-                    logger.info(
-                        f"[{ident}] 导入完成: "
-                        f"{imported_count} 条记忆, "
-                        f"耗时 {elapsed:.2f}s"
+                    short_msg = (message or "")[:48]
+                    pg.update(
+                        sse_h,
+                        completed=min(100.0, max(0.0, progress_f)),
+                        description=(
+                            f"[{ident}] import [{stage}] {short_msg}"
+                        ),
                     )
+
+                    extra = event.get("extra_data")
+                    if stage == "completed" and extra:
+                        msg_ids = extra.get("message_ids", [])
+                        elapsed = extra.get("elapsed_time", 0)
+                        imported_count = len(msg_ids)
+                        logger.info(
+                            f"[{ident}] 导入完成: "
+                            f"{imported_count} 条记忆, "
+                            f"耗时 {elapsed:.2f}s"
+                        )
+        finally:
+            pg.remove_task(sse_h)
 
         return imported_count
 
@@ -372,6 +533,20 @@ class MemechoMemory(MemoryMixin):
         self._ensure_initialized()
         ident = self.memory_identifier
 
+        if self._use_simulated_import:
+            tok_chunks = self._merge_documents_by_tokens(
+                documents, self._simulated_import_max_tokens,
+            )
+            total_tok = sum(len(self.encoding.encode(c)) for c in tok_chunks)
+            logger.info(
+                f"[{ident}] 模拟语料导入: {len(documents)} 篇文档 "
+                f"→ {len(tok_chunks)} 条消息 (每条约 ≤ "
+                f"{self._simulated_import_max_tokens} tokens, 共 {total_tok} tokens)"
+            )
+            self._simulated_import_text_chunks(tok_chunks)
+            self._persistent_lib = True
+            return str(self._memory_lib_id)
+
         chunks = self._merge_documents(documents, max_chunk_chars)
         total_chars = sum(len(c) for c in chunks)
         logger.info(
@@ -380,24 +555,44 @@ class MemechoMemory(MemoryMixin):
             f"(共 {total_chars:,} 字符)"
         )
 
-        for i, chunk_text in enumerate(chunks):
-            tokens = len(self.encoding.encode(chunk_text))
-            b64 = base64.b64encode(
-                chunk_text.encode("utf-8"),
-            ).decode("ascii")
-            data_uri = f"data:text/plain;base64,{b64}"
+        pg = get_progress()
+        n_chunks = len(chunks)
+        chunk_total = float(n_chunks) if n_chunks > 0 else 1.0
+        ch_h = pg.add_task(
+            f"[{ident}] import_file_fast 块",
+            total=chunk_total,
+            task_key="memecho:import_corpus_chunks",
+        )
+        try:
+            for i, chunk_text in enumerate(chunks):
+                tokens = len(self.encoding.encode(chunk_text))
+                b64 = base64.b64encode(
+                    chunk_text.encode("utf-8"),
+                ).decode("ascii")
+                data_uri = f"data:text/plain;base64,{b64}"
 
-            b64_kb = len(b64) / 1024
-            logger.info(
-                f"[{ident}] import_file_fast "
-                f"[{i + 1}/{len(chunks)}] "
-                f"({len(chunk_text):,} chars, "
-                f"base64 ~{b64_kb:.0f} KB) {tokens} tokens"
-            )
-            self._import_file_fast(
-                data_uri,
-                first_event_timeout=first_event_timeout,
-            )
+                b64_kb = len(b64) / 1024
+                logger.info(
+                    f"[{ident}] import_file_fast "
+                    f"[{i + 1}/{len(chunks)}] "
+                    f"({len(chunk_text):,} chars, "
+                    f"base64 ~{b64_kb:.0f} KB) {tokens} tokens"
+                )
+                pg.update(
+                    ch_h,
+                    description=(
+                        f"[{ident}] 语料块 [{i + 1}/{n_chunks}]"
+                    ),
+                )
+                self._import_file_fast(
+                    data_uri,
+                    first_event_timeout=first_event_timeout,
+                )
+                pg.advance(ch_h, 1)
+            if n_chunks == 0:
+                pg.advance(ch_h, 1)
+        finally:
+            pg.remove_task(ch_h)
 
         logger.info(
             f"[{ident}] 语料导入完成 "

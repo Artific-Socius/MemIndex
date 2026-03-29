@@ -56,6 +56,23 @@ flowchart LR
 | 理解结果 JSON 的 Pydantic 模型 / 对接分析工具 | [guide-benchmark-lite.md > 结果 Pydantic 模型](guide-benchmark-lite.md#结果-pydantic-模型) |
 | 在 Memory 实现中提供真实 Message ID | [guide-memory.md > Message ID 追踪协议](guide-memory.md#message-id-追踪协议) |
 
+## 终端进度条（Rich）
+
+评测主入口 `run_benchmark_lite.py` 在 **stderr 为 TTY** 时会建立共享 Rich `Console`：**loguru 日志与多任务进度**走同一后端，避免 stdout 日志与 stderr Live 进度错行；描述列按终端宽度截断（省略号）。`--no-progress` 仅关闭 Live 进度条，仍用同一 Console 打日志。重定向或非 TTY 下回退为普通 stderr 日志。同类子任务可用 `task_key` 复用一行（如 UniversalAdapter 加载、Runner 预置历史、LLM 单次调用等），减少重复刷屏。
+
+编程方式自行跑 `Runner` 时，若需要相同效果，请在最外层使用：
+
+```python
+from agent.progress import progress_context
+
+with progress_context():
+    Runner().run(agent, benchmark)
+```
+
+在 `agent`、`memory`、`llm` 或自定义 Benchmark 内部通过 `get_progress()` 获取当前管理器；无上下文时为 **no-op**，不会报错。详见 [guide-benchmark-lite.md](guide-benchmark-lite.md#全局-rich-进度条) 与 [guide-memory.md](guide-memory.md#批量导入与进度)。
+
+在**真实终端**里肉眼验证进度条，可运行 `python scripts/progress_smoke.py`（比在 pytest 捕获输出下更可靠）。
+
 ## 快速开始
 
 ```bash
@@ -86,3 +103,4 @@ python run_benchmark_lite.py \
 | `--max-turns` | BufferMemory 滑动窗口大小 | 不限 |
 | `-v` | 显示每轮详情 | 关 |
 | `-o FILE` | 结果写入 JSON 文件 | 不保存 |
+| `--no-progress` | 关闭 Rich 进度条 | 关（TTY 下启用） |

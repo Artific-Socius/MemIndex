@@ -14,6 +14,7 @@ from typing import Callable, Optional
 from loguru import logger
 
 from agent import Agent
+from agent.progress import get_progress
 
 from .base import BenchmarkLite, InteractiveScenario
 from .types import (
@@ -117,6 +118,14 @@ class Runner:
             )
             logger.info(f"Agent: {agent.identifier}")
 
+        pg = get_progress()
+        n_sc = len(scenarios)
+        bench_total = n_sc if n_sc > 0 else 1
+        bench_h = pg.add_task(
+            f"[cyan]{benchmark.name}[/cyan] · 场景",
+            total=float(bench_total),
+            task_key=f"runner:benchmark_scenarios:{benchmark.name}",
+        )
         for si, scenario in enumerate(scenarios):
             if on_scenario_start:
                 on_scenario_start(scenario)
@@ -134,6 +143,14 @@ class Runner:
                     f"[{si + 1}/{len(scenarios)}] 场景: {sid}{suffix}"
                 )
 
+            pg.update(
+                bench_h,
+                description=(
+                    f"[cyan]{benchmark.name}[/cyan] · "
+                    f"场景 [{si + 1}/{n_sc}] {sid}"
+                ),
+            )
+
             agent.reset()
 
             if isinstance(scenario, InteractiveScenario):
@@ -148,6 +165,20 @@ class Runner:
             scenario_results.append(sr)
             if sr.memory_library_id:
                 scenario_memory_library_ids[sid] = sr.memory_library_id
+
+            pg.advance(bench_h, 1)
+
+        if n_sc == 0:
+            pg.advance(bench_h, 1)
+        # 不 remove_task：保留主进度条在终端上，避免 progress_context 退出后一片空白
+        pg.update(
+            bench_h,
+            completed=float(bench_total),
+            description=(
+                f"[cyan]{benchmark.name}[/cyan] · 场景 · 完成 "
+                f"({n_sc} 个)"
+            ),
+        )
 
         aggregate = benchmark.aggregate(scenario_results)
 
@@ -180,13 +211,22 @@ class Runner:
         meta = scenario.metadata or {}
         corpus_docs: list[str] = meta.get("corpus_documents", [])
         corpus_id: str = meta.get("corpus_id", "")
+        pg = get_progress()
 
         if corpus_docs and hasattr(agent, "import_corpus"):
             logger.info(
                 f"  语料导入: {len(corpus_docs)} 篇文档 "
                 f"(corpus_id={corpus_id})"
             )
-            lib_id = agent.import_corpus(corpus_docs, corpus_id)
+            ih = pg.add_task(
+                f"  语料导入 ({len(corpus_docs)} 篇)",
+                total=None,
+                task_key="runner:import_corpus",
+            )
+            try:
+                lib_id = agent.import_corpus(corpus_docs, corpus_id)
+            finally:
+                pg.remove_task(ih)
             if hasattr(agent, "set_persistent_lib"):
                 agent.set_persistent_lib(lib_id)
             return
@@ -196,7 +236,15 @@ class Runner:
                 (entry.user_message, entry.assistant_response)
                 for entry in scenario.preload_history
             ]
-            imported = agent.bulk_import(conversations)
+            ih = pg.add_task(
+                f"  预置历史 ({len(conversations)} 轮)",
+                total=None,
+                task_key="runner:preload_history",
+            )
+            try:
+                imported = agent.bulk_import(conversations)
+            finally:
+                pg.remove_task(ih)
             if self._verbose:
                 logger.info(f"  批量导入 {imported} 轮对话历史")
 
@@ -215,41 +263,57 @@ class Runner:
     ) -> ScenarioResult:
         self._import_context(agent, scenario)
 
+        pg = get_progress()
+        n_turns = len(scenario.turns)
+        turn_total = float(n_turns) if n_turns > 0 else 1.0
+        th = pg.add_task(
+            f"  回合 · {scenario.id}",
+            total=turn_total,
+            task_key=f"runner:scripted_turns:{scenario.id}",
+        )
         turn_results: list[TurnResult] = []
-        for ti, turn in enumerate(scenario.turns):
-            response = agent.chat(turn.user_input)
+        try:
+            for ti, turn in enumerate(scenario.turns):
+                response = agent.chat(turn.user_input)
 
-            trace = _trace_from_agent(agent)
-            turn_meta = dict(turn.metadata) if turn.metadata else {}
-            deps, dep_policy = _dependency_from_turn_meta(turn_meta)
+                trace = _trace_from_agent(agent)
+                turn_meta = dict(turn.metadata) if turn.metadata else {}
+                deps, dep_policy = _dependency_from_turn_meta(turn_meta)
 
-            score = None
-            if turn.turn_type == TurnType.EVALUATION:
-                score = benchmark.evaluate(turn, response, turn_results)
-                if self._verbose:
-                    status = "PASS" if score.passed else "FAIL"
-                    logger.info(
-                        f"  Turn {ti} [EVAL] {status} "
-                        f"(score={score.score:.2f})"
-                    )
-            elif self._verbose:
-                logger.debug(f"  Turn {ti} [CONV] done")
+                score = None
+                if turn.turn_type == TurnType.EVALUATION:
+                    score = benchmark.evaluate(turn, response, turn_results)
+                    if self._verbose:
+                        status = "PASS" if score.passed else "FAIL"
+                        logger.info(
+                            f"  Turn {ti} [EVAL] {status} "
+                            f"(score={score.score:.2f})"
+                        )
+                elif self._verbose:
+                    logger.debug(f"  Turn {ti} [CONV] done")
 
-            result = TurnResult(
-                turn_index=ti,
-                user_input=turn.user_input,
-                response=response,
-                turn_type=turn.turn_type,
-                score=score,
-                metadata=turn_meta,
-                message_trace=trace,
-                depends_on_turn_indices=deps,
-                dependency_policy=dep_policy,
-            )
-            turn_results.append(result)
+                result = TurnResult(
+                    turn_index=ti,
+                    user_input=turn.user_input,
+                    response=response,
+                    turn_type=turn.turn_type,
+                    score=score,
+                    metadata=turn_meta,
+                    message_trace=trace,
+                    depends_on_turn_indices=deps,
+                    dependency_policy=dep_policy,
+                )
+                turn_results.append(result)
 
-            if on_turn_complete:
-                on_turn_complete(scenario, result)
+                if on_turn_complete:
+                    on_turn_complete(scenario, result)
+
+                pg.advance(th, 1)
+
+            if n_turns == 0:
+                pg.advance(th, 1)
+        finally:
+            pg.remove_task(th)
 
         preload = [
             PreloadHistoryEntry(
@@ -280,39 +344,48 @@ class Runner:
             Callable[[InteractiveScenario, TurnResult], None]
         ],
     ) -> ScenarioResult:
+        pg = get_progress()
+        th = pg.add_task(
+            f"  交互回合 · {scenario.id}",
+            total=None,
+            task_key=f"runner:interactive:{scenario.id}",
+        )
         turn_results: list[TurnResult] = []
         ti = 0
+        try:
+            while True:
+                turn = scenario.next_turn(turn_results)
+                if turn is None:
+                    break
 
-        while True:
-            turn = scenario.next_turn(turn_results)
-            if turn is None:
-                break
+                response = agent.chat(turn.user_input)
+                trace = _trace_from_agent(agent)
+                turn_meta = dict(turn.metadata) if turn.metadata else {}
+                deps, dep_policy = _dependency_from_turn_meta(turn_meta)
 
-            response = agent.chat(turn.user_input)
-            trace = _trace_from_agent(agent)
-            turn_meta = dict(turn.metadata) if turn.metadata else {}
-            deps, dep_policy = _dependency_from_turn_meta(turn_meta)
+                if self._verbose:
+                    tag = turn.turn_type.value.upper()[:4]
+                    logger.debug(f"  Turn {ti} [{tag}] done")
 
-            if self._verbose:
-                tag = turn.turn_type.value.upper()[:4]
-                logger.debug(f"  Turn {ti} [{tag}] done")
+                result = TurnResult(
+                    turn_index=ti,
+                    user_input=turn.user_input,
+                    response=response,
+                    turn_type=turn.turn_type,
+                    metadata=turn_meta,
+                    message_trace=trace,
+                    depends_on_turn_indices=deps,
+                    dependency_policy=dep_policy,
+                )
+                turn_results.append(result)
 
-            result = TurnResult(
-                turn_index=ti,
-                user_input=turn.user_input,
-                response=response,
-                turn_type=turn.turn_type,
-                metadata=turn_meta,
-                message_trace=trace,
-                depends_on_turn_indices=deps,
-                dependency_policy=dep_policy,
-            )
-            turn_results.append(result)
+                if on_turn_complete:
+                    on_turn_complete(scenario, result)
 
-            if on_turn_complete:
-                on_turn_complete(scenario, result)
-
-            ti += 1
+                pg.advance(th, 1)
+                ti += 1
+        finally:
+            pg.remove_task(th)
 
         # 事后评估
         scenario_score: ScenarioScore = scenario.evaluate(turn_results)

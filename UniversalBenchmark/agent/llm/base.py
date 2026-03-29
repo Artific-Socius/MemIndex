@@ -6,6 +6,8 @@ from typing import Any, Optional
 import litellm
 from loguru import logger
 
+from agent.progress import get_progress
+
 _NON_RETRYABLE = {
     "AuthenticationError",
     "BadRequestError",
@@ -85,31 +87,47 @@ class LLMMixin:
         params = self._build_completion_params()
         params.update(kwargs)
 
+        pg = get_progress()
+        llm_h = pg.add_task(
+            f"LLM · {self.model_name}",
+            total=None,
+            task_key="llm:completion",
+        )
         last_error: Optional[Exception] = None
-        for attempt in range(self._max_retries):
-            try:
-                response = litellm.completion(
-                    model=self.model_name,
-                    messages=prepared,
-                    **params,
+        try:
+            for attempt in range(self._max_retries):
+                pg.update(
+                    llm_h,
+                    description=(
+                        f"LLM · {self.model_name} "
+                        f"({attempt + 1}/{self._max_retries})"
+                    ),
                 )
-                self._last_raw_response = response
-                return self.parse_response(response)
-            except Exception as exc:
-                if type(exc).__name__ in _NON_RETRYABLE:
-                    raise
-                last_error = exc
-                logger.warning(
-                    f"LLM 调用失败 "
-                    f"(第 {attempt + 1}/{self._max_retries} 次): "
-                    f"{type(exc).__name__}: {exc}"
-                )
-                if attempt < self._max_retries - 1:
-                    time.sleep(self._retry_base_delay * (2 ** attempt))
+                try:
+                    response = litellm.completion(
+                        model=self.model_name,
+                        messages=prepared,
+                        **params,
+                    )
+                    self._last_raw_response = response
+                    return self.parse_response(response)
+                except Exception as exc:
+                    if type(exc).__name__ in _NON_RETRYABLE:
+                        raise
+                    last_error = exc
+                    logger.warning(
+                        f"LLM 调用失败 "
+                        f"(第 {attempt + 1}/{self._max_retries} 次): "
+                        f"{type(exc).__name__}: {exc}"
+                    )
+                    if attempt < self._max_retries - 1:
+                        time.sleep(self._retry_base_delay * (2 ** attempt))
 
-        raise RuntimeError(
-            f"LLM 在 {self._max_retries} 次重试后仍然失败"
-        ) from last_error
+            raise RuntimeError(
+                f"LLM 在 {self._max_retries} 次重试后仍然失败"
+            ) from last_error
+        finally:
+            pg.remove_task(llm_h)
 
     # ------------------------------------------------------------------
     # 钩子方法 - 子类可覆写以定制行为

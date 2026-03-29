@@ -7,6 +7,8 @@ from typing import Any, Optional
 
 from loguru import logger
 
+from agent.progress import get_progress
+
 
 @dataclass
 class TurnTrace:
@@ -230,17 +232,29 @@ class MemoryMixin(ABC):
             f"[{ident}] 开始批量导入 {total} 条对话"
             f"（逐条模式，当前记忆方案不支持原生批量导入）"
         )
+        pg = get_progress()
+        bh = pg.add_task(
+            f"[{ident}] bulk_import",
+            total=float(total) if total > 0 else 1.0,
+            task_key="memory:bulk_import",
+        )
         imported = 0
         report_interval = max(1, total // 10)
-        for user_input, assistant_response in conversations:
-            self.get_messages(user_input)
-            self.add_response(assistant_response)
-            imported += 1
-            if imported % report_interval == 0 or imported == total:
-                logger.info(
-                    f"[{ident}] 批量导入进度: "
-                    f"{imported}/{total} ({imported * 100 // total}%)"
-                )
+        try:
+            for user_input, assistant_response in conversations:
+                self.get_messages(user_input)
+                self.add_response(assistant_response)
+                imported += 1
+                pg.advance(bh, 1)
+                if imported % report_interval == 0 or imported == total:
+                    logger.info(
+                        f"[{ident}] 批量导入进度: "
+                        f"{imported}/{total} ({imported * 100 // max(total, 1)}%)"
+                    )
+            if total == 0:
+                pg.advance(bh, 1)
+        finally:
+            pg.remove_task(bh)
         logger.info(f"[{ident}] 批量导入完成: 共导入 {imported} 条对话")
         return imported
 

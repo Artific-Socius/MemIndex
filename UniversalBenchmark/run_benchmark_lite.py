@@ -46,7 +46,12 @@ from typing import Type
 from loguru import logger
 
 logger.remove()
-logger.add(sys.stdout, colorize=True)
+logger.add(
+    sys.stderr,
+    level="INFO",
+    format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level:<8} | {message}",
+    colorize=sys.stderr.isatty(),
+)
 
 from dotenv import load_dotenv
 
@@ -54,6 +59,7 @@ load_dotenv()
 
 from agent import Agent  # noqa: E402
 from agent.env_config import get_memory_config, load_env_config  # noqa: E402
+from agent.progress import loguru_sink_message, progress_context  # noqa: E402
 from agent.memory import BufferMemory, Mem0Memory, MemechoMemory  # noqa: E402
 from agent.memory.base import MemoryMixin  # noqa: E402
 from benchmark.interfaces import Benchmark as DataBenchmark  # noqa: E402
@@ -234,83 +240,121 @@ def main() -> None:
         default=None,
         help="将结果保存到指定文件（JSON 格式）",
     )
+    parser.add_argument(
+        "--no-progress",
+        action="store_true",
+        help="禁用终端 Rich 多任务进度条（适合 CI / 重定向输出）",
+    )
 
     args = parser.parse_args()
 
-    # ── 加载环境配置 ────────────────────────────────────────
-    load_env_config()
-    mem_cfg = get_memory_config(args.memory)
-    if mem_cfg:
-        print(f"[env_config] 已加载 {args.memory} 的环境配置: {mem_cfg}")
+    def run_pipeline() -> BenchmarkResult:
+        # ── 加载环境配置 ────────────────────────────────────
+        load_env_config()
+        mem_cfg = get_memory_config(args.memory)
+        if mem_cfg:
+            logger.info(
+                f"[env_config] 已加载 {args.memory} 的环境配置: {mem_cfg}",
+            )
 
-    # ── 加载 Benchmark ──────────────────────────────────────
-    benchmark_cls = load_class(args.benchmark)
-    benchmark: BenchmarkLite
+        # ── 加载 Benchmark ──────────────────────────────────
+        benchmark_cls = load_class(args.benchmark)
+        benchmark: BenchmarkLite
 
-    if isinstance(benchmark_cls, type) and issubclass(
-        benchmark_cls, BenchmarkLite,
-    ):
-        benchmark = benchmark_cls()
-        print(f"[benchmark] BenchmarkLite 直接加载: {benchmark.name}")
+        if isinstance(benchmark_cls, type) and issubclass(
+            benchmark_cls, BenchmarkLite,
+        ):
+            benchmark = benchmark_cls()
+            logger.info(
+                f"[benchmark] BenchmarkLite 直接加载: {benchmark.name}",
+            )
 
-    elif isinstance(benchmark_cls, type) and issubclass(
-        benchmark_cls, DataBenchmark,
-    ):
-        data_benchmark: DataBenchmark = benchmark_cls()
-        benchmark = UniversalAdapter(
-            data_benchmark,
-            eval_model=args.eval_model,
-            scene_ids=args.scene_ids,
-            max_bg_chars=args.max_bg_chars,
-            max_questions=args.max_questions,
+        elif isinstance(benchmark_cls, type) and issubclass(
+            benchmark_cls, DataBenchmark,
+        ):
+            data_benchmark: DataBenchmark = benchmark_cls()
+            benchmark = UniversalAdapter(
+                data_benchmark,
+                eval_model=args.eval_model,
+                scene_ids=args.scene_ids,
+                max_bg_chars=args.max_bg_chars,
+                max_questions=args.max_questions,
+            )
+            logger.info(
+                f"[benchmark] 数据层 Benchmark 已通过 UniversalAdapter 适配: "
+                f"{benchmark.name}",
+            )
+        else:
+            logger.error(
+                f"错误: '{args.benchmark}' 既不是 BenchmarkLite 的子类，"
+                f"也不是 benchmark.interfaces.Benchmark 的子类",
+            )
+            sys.exit(1)
+
+        # ── 创建 Agent ──────────────────────────────────────
+        agent = build_agent(
+            args.memory, args.model, args.system_prompt,
+            max_turns=args.max_turns,
+            read_only=args.read_only,
+            memory_lib_id=args.memory_lib_id,
         )
-        print(
-            f"[benchmark] 数据层 Benchmark 已通过 UniversalAdapter 适配: "
-            f"{benchmark.name}"
+
+        # ── 运行 ────────────────────────────────────────────
+        runner = Runner(verbose=True)
+        bench_result = runner.run(agent, benchmark)
+
+        # ── 注入运行配置快照 ──────────────────────────────
+        extra_cfg: dict = {}
+        if args.scene_ids is not None:
+            extra_cfg["scene_ids"] = args.scene_ids
+        if args.max_bg_chars is not None:
+            extra_cfg["max_bg_chars"] = args.max_bg_chars
+        if args.max_questions is not None:
+            extra_cfg["max_questions"] = args.max_questions
+        if args.max_turns is not None:
+            extra_cfg["max_turns"] = args.max_turns
+        if args.read_only:
+            extra_cfg["read_only"] = True
+        if args.memory_lib_id:
+            extra_cfg["memory_lib_id"] = args.memory_lib_id
+        extra_cfg["benchmark_path"] = args.benchmark
+
+        bench_result.run_config = RunConfig(
+            memory_type=args.memory,
+            model=args.model,
+            eval_model=args.eval_model,
+            system_prompt=args.system_prompt,
+            extra=extra_cfg,
+        )
+        return bench_result
+
+    tty = sys.stderr.isatty()
+    use_live = tty and not args.no_progress
+    if tty:
+        logger.remove()
+        with progress_context(live=use_live, force_console=True):
+            logger.add(
+                loguru_sink_message,
+                # 样式由 loguru_sink_message 内 Rich Text 统一渲染（含消息正文级别色）
+                format="{message}",
+                level="INFO",
+                colorize=False,
+            )
+            try:
+                result = run_pipeline()
+            finally:
+                logger.remove()
+        logger.add(
+            sys.stderr,
+            level="INFO",
+            format=(
+                "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
+                "<level>{level:<8}</level> | <level>{message}</level>"
+            ),
+            colorize=sys.stderr.isatty(),
         )
     else:
-        print(
-            f"错误: '{args.benchmark}' 既不是 BenchmarkLite 的子类，"
-            f"也不是 benchmark.interfaces.Benchmark 的子类",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    # ── 创建 Agent ──────────────────────────────────────────
-    agent = build_agent(
-        args.memory, args.model, args.system_prompt,
-        max_turns=args.max_turns,
-        read_only=args.read_only,
-        memory_lib_id=args.memory_lib_id,
-    )
-
-    # ── 运行 ────────────────────────────────────────────────
-    runner = Runner(verbose=True)
-    result = runner.run(agent, benchmark)
-
-    # ── 注入运行配置快照 ──────────────────────────────────
-    extra_cfg: dict = {}
-    if args.scene_ids is not None:
-        extra_cfg["scene_ids"] = args.scene_ids
-    if args.max_bg_chars is not None:
-        extra_cfg["max_bg_chars"] = args.max_bg_chars
-    if args.max_questions is not None:
-        extra_cfg["max_questions"] = args.max_questions
-    if args.max_turns is not None:
-        extra_cfg["max_turns"] = args.max_turns
-    if args.read_only:
-        extra_cfg["read_only"] = True
-    if args.memory_lib_id:
-        extra_cfg["memory_lib_id"] = args.memory_lib_id
-    extra_cfg["benchmark_path"] = args.benchmark
-
-    result.run_config = RunConfig(
-        memory_type=args.memory,
-        model=args.model,
-        eval_model=args.eval_model,
-        system_prompt=args.system_prompt,
-        extra=extra_cfg,
-    )
+        result = run_pipeline()
 
     # ── 输出报告 ────────────────────────────────────────────
     report = format_report(result, verbose=args.verbose)

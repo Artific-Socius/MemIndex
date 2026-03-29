@@ -29,6 +29,8 @@ from typing import Any, Iterable
 
 from loguru import logger
 
+from agent.progress import get_progress
+
 from benchmark.interfaces import Benchmark, Scene
 from benchmark_lite.base import BenchmarkLite
 from benchmark_lite.evaluators import BaseEvaluator, get_evaluator
@@ -113,11 +115,38 @@ class UniversalAdapter(BenchmarkLite):
                 )
                 return []
 
+        if not ids:
+            return []
+
+        pg = get_progress()
+        n_ids = len(ids)
+        load_h = pg.add_task(
+            f"UniversalAdapter · 加载场景 · {self.name}",
+            total=float(n_ids),
+            task_key=f"universal_adapter:load_scenarios:{self.name}",
+        )
         scenarios: list[Scenario] = []
-        for sid in ids:
+        for i, sid in enumerate(ids):
+            pg.update(
+                load_h,
+                description=(
+                    f"UniversalAdapter · {self.name} · "
+                    f"场景 [{i + 1}/{n_ids}] {sid}"
+                ),
+            )
             scene = self._benchmark.get_scene(sid)
             scenario = self._scene_to_scenario(scene)
             scenarios.append(scenario)
+            pg.advance(load_h, 1)
+
+        pg.update(
+            load_h,
+            completed=float(n_ids),
+            description=(
+                f"UniversalAdapter · {self.name} · "
+                f"加载完成 ({n_ids} 个场景)"
+            ),
+        )
 
         return scenarios
 
