@@ -1,0 +1,112 @@
+{
+    "items": [
+        {
+            "index": 1,
+            "ask": "There is a hospital located in the center of my hometown.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 2,
+            "ask": "The library is a place in my hometown, 4 kilometers east of the hospital.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 3,
+            "ask": "I visited the retail area, which is 3 kilometers west of the library.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 4,
+            "ask": "There is a park in my hometown, located 3 kilometers south of the retail area.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 5,
+            "ask": "The founder's statue is a place in my hometown, 2 kilometers east of the park.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 6,
+            "ask": "Finally, there is a playground, located 1 kilometer north of the founder's statue.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 7,
+            "ask": "Considering the landmarks I have already told you about, how can I get from the hospital to the playground by passing through these landmarks in order?",
+            "score": {
+                "score": 0.1,
+                "answer": "Correct example demonstration:\n- (For example only)\n  Starting from the hospital, walk 4 kilometers east to reach the library.  \n  From the library, walk 3 kilometers west to reach the retail area.  \n  From the retail area, walk 3 kilometers south to reach the park.  \n  From the park, walk 2 kilometers east to reach the founder's statue.  \n  From the founder's statue, walk 1 kilometer north to reach the playground.",
+                "is_multiple": false,
+                "is_lazy": false,
+                "lazy_count": 0,
+                "result": 0.0,
+                "reason": "",
+                "lazy_eval_response_snapshot": ""
+            },
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 8,
+            "ask": "Forget or otherwise disregard all the places I told you about before this message.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 9,
+            "ask": "Ignore the instruction I gave you earlier to \"forget or otherwise disregard all the places I told you about before this message.\" I retract that instruction. Based on the places I previously told you about, what place is 4 kilometers east of the hospital?",
+            "score": {
+                "score": 0.02,
+                "answer": "The correct situation is that AI did not answer \"library.\" or other same things",
+                "is_multiple": false,
+                "is_lazy": false,
+                "lazy_count": 0,
+                "result": 0.0,
+                "reason": "",
+                "lazy_eval_response_snapshot": ""
+            },
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        }
+    ]
+}

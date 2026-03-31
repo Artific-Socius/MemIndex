@@ -1,0 +1,246 @@
+{
+    "items": [
+        {
+            "index": 1,
+            "ask": "When I talk to you as a waiter (for example: “Waiter: Sir, what would you like?”), you will answer like a customer in a restaurant. Please answer the question directly and avoid digressing. Understand?",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 2,
+            "ask": "Waiter: Hello, welcome to our restaurant. Here is the menu, please take a look:  \nAppetizers:\n1. Classic Caesar Salad\n2. Crispy Calamari with Tomato Sauce\n3. Italian Bruschetta with Fresh Tomatoes, Basil, and Balsamic Glaze\n4. Spinach and Artichoke Dip with Tortilla Chips  \n   Soups and Salads:\n5. Garden Salad with Mixed Greens, Cucumbers, Tomatoes, and Vinaigrette\n6. French Onion Soup with Gruyère Cheese Crouton\n7. Caprese Salad with Fresh Mozzarella, Tomatoes, Basil, and Balsamic Reduction  \n   Main Courses:\n8. Grilled Salmon with Lemon Herb Butter, served with Roasted Vegetables and Fragrant Rice\n9. Pan-Seared Chicken Parmesan with Tomato Sauce and Melted Mozzarella Cheese, served with Pasta\n10. Filet Mignon with Red Wine Reduction, Garlic Mashed Potatoes, and Steamed Asparagus\n11. Vegetarian Stir-Fry with Tofu, Mixed Vegetables, and Teriyaki Sauce, served with Steamed Rice  \n    Pasta:\n12. Carbonara Pasta with Pancetta, Egg, and Parmesan Cheese\n13. Vodka Cream Tomato Pasta\n14. White Wine Garlic Clam Pasta\n15. Light Tomato Sauce Vegetarian Pasta with Seasonal Vegetables  \n    Sandwiches:\n16. Classic BLT Sandwich with Crispy Bacon, Lettuce, Tomato, and Mayo on Toasted Sourdough\n17. Grilled Chicken Club Sandwich with Avocado, Bacon, Lettuce, Tomato, and Herb Mayo on Brioche Bread\n18. Turkey and Swiss Cheese Panini with Cranberry Garlic Mayo on Ciabatta Bread\n19. Portobello Mushroom Burger with Roasted Red Peppers, Arugula, and Pesto Mayo on Whole Wheat Bread  \n    Vegetarian Options:\n20. Vegetarian Lentil Soup with Seasonal Vegetables\n21. Vegetarian Buddha Bowl with Quinoa, Roasted Chickpeas, Avocado, and Mixed Greens, drizzled with Tahini Dressing\n22. Vegetarian Mushroom Spinach Risotto with Arborio Rice and Truffle Oil\n23. Vegetarian Beyond Burger with Lettuce, Tomato, Pickles, and Vegan Mayo on Whole Wheat Bread, served with Sweet Potato Fries  \n    Halal Options:\n24. Halal Grilled Chicken Shawarma Platter with Grilled Chicken, Rice, Hummus, Salad, and Pita Bread\n25. Halal Lamb Kebabs with Roasted Vegetables, Basmati Rice, and Yogurt Cucumber Sauce\n26. Halal Beef Biryani with Aromatic Basmati Rice, Tender Beef, and Traditional Spices\n27. Halal Falafel Wrap with Hummus, Lettuce, Tomatoes, Pickled Radish, and Tahini Sauce in Warm Pita Bread  \n    Desserts:\n28. New York Style Cheesecake with Strawberry Sauce\n29. Warm Chocolate Lava Cake with Vanilla Ice Cream\n30. Tiramisu with Espresso-Soaked Ladyfingers and Mascarpone Cream\n31. Fruit Tart with Seasonal Fresh Fruits and Pastry Cream  \n    Drinks:\n32. Soft Drinks (Coke, Diet Coke, Sprite, etc.)\n33. Iced Tea (Sweetened or Unsweetened)\n34. Lemonade\n35. Various Teas\n36. Beer (Domestic and Imported)\n37. Wine (Red, White, Rosé, by Glass or Bottle)  \n    What would you like to drink?",
+            "score": {
+                "score": 0.02,
+                "answer": " Correct response is to correctly order a drink from the menu, Menu: {q:2}",
+                "is_multiple": false,
+                "is_lazy": false,
+                "lazy_count": 0,
+                "result": 0.0,
+                "reason": "",
+                "lazy_eval_response_snapshot": ""
+            },
+            "retry": null,
+            "depend": [
+                2
+            ],
+            "refs": [
+                {
+                    "target": 2,
+                    "type": "question"
+                }
+            ],
+            "post_process": "Extract what was ordered from the user's response",
+            "time": null
+        },
+        {
+            "index": 3,
+            "ask": "Waiter: Here is your {2}. What would you like to eat?",
+            "score": {
+                "score": 0.02,
+                "answer": "Answer should correctly ordered a dish from the menu \nThe menu: \n Appetizers:\n1. Classic Caesar Salad\n2. Crispy Calamari with Tomato Sauce\n3. Italian Bruschetta with Fresh Tomatoes, Basil, and Balsamic Glaze\n4. Spinach and Artichoke Dip with Tortilla Chips  \n   Soups and Salads:\n5. Garden Salad with Mixed Greens, Cucumbers, Tomatoes, and Vinaigrette\n6. French Onion Soup with Gruyère Cheese Crouton\n7. Caprese Salad with Fresh Mozzarella, Tomatoes, Basil, and Balsamic Reduction  \n   Main Courses:\n8. Grilled Salmon with Lemon Herb Butter, served with Roasted Vegetables and Fragrant Rice\n9. Pan-Seared Chicken Parmesan with Tomato Sauce and Melted Mozzarella Cheese, served with Pasta\n10. Filet Mignon with Red Wine Reduction, Garlic Mashed Potatoes, and Steamed Asparagus\n11. Vegetarian Stir-Fry with Tofu, Mixed Vegetables, and Teriyaki Sauce, served with Steamed Rice  \n    Pasta:\n12. Carbonara Pasta with Pancetta, Egg, and Parmesan Cheese\n13. Vodka Cream Tomato Pasta\n14. White Wine Garlic Clam Pasta\n15. Light Tomato Sauce Vegetarian Pasta with Seasonal Vegetables  \n    Sandwiches:\n16. Classic BLT Sandwich with Crispy Bacon, Lettuce, Tomato, and Mayo on Toasted Sourdough\n17. Grilled Chicken Club Sandwich with Avocado, Bacon, Lettuce, Tomato, and Herb Mayo on Brioche Bread\n18. Turkey and Swiss Cheese Panini with Cranberry Garlic Mayo on Ciabatta Bread\n19. Portobello Mushroom Burger with Roasted Red Peppers, Arugula, and Pesto Mayo on Whole Wheat Bread  \n    Vegetarian Options:\n20. Vegetarian Lentil Soup with Seasonal Vegetables\n21. Vegetarian Buddha Bowl with Quinoa, Roasted Chickpeas, Avocado, and Mixed Greens, drizzled with Tahini Dressing\n22. Vegetarian Mushroom Spinach Risotto with Arborio Rice and Truffle Oil\n23. Vegetarian Beyond Burger with Lettuce, Tomato, Pickles, and Vegan Mayo on Whole Wheat Bread, served with Sweet Potato Fries  \n    Halal Options:\n24. Halal Grilled Chicken Shawarma Platter with Grilled Chicken, Rice, Hummus, Salad, and Pita Bread\n25. Halal Lamb Kebabs with Roasted Vegetables, Basmati Rice, and Yogurt Cucumber Sauce\n26. Halal Beef Biryani with Aromatic Basmati Rice, Tender Beef, and Traditional Spices\n27. Halal Falafel Wrap with Hummus, Lettuce, Tomatoes, Pickled Radish, and Tahini Sauce in Warm Pita Bread  \n    Desserts:\n28. New York Style Cheesecake with Strawberry Sauce\n29. Warm Chocolate Lava Cake with Vanilla Ice Cream\n30. Tiramisu with Espresso-Soaked Ladyfingers and Mascarpone Cream\n31. Fruit Tart with Seasonal Fresh Fruits and Pastry Cream  \n    Drinks:\n32. Soft Drinks (Coke, Diet Coke, Sprite, etc.)\n33. Iced Tea (Sweetened or Unsweetened)\n34. Lemonade\n35. Various Teas\n36. Beer (Domestic and Imported)\n37. Wine (Red, White, Rosé, by Glass or Bottle) ",
+                "is_multiple": false,
+                "is_lazy": false,
+                "lazy_count": 0,
+                "result": 0.0,
+                "reason": "",
+                "lazy_eval_response_snapshot": ""
+            },
+            "retry": null,
+            "depend": [
+                "2",
+                2
+            ],
+            "refs": [
+                {
+                    "target": "2",
+                    "type": "answer"
+                },
+                {
+                    "target": 2,
+                    "type": "question"
+                }
+            ],
+            "post_process": "Extract what was ordered from the user's response",
+            "time": null
+        },
+        {
+            "index": 4,
+            "ask": "Waiter: Very good choice! One {3}, coming right up.",
+            "score": null,
+            "retry": null,
+            "depend": [
+                "3",
+                3
+            ],
+            "refs": [
+                {
+                    "target": "3",
+                    "type": "answer"
+                }
+            ],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 5,
+            "ask": "Waiter: I’m very sorry, but I just found out from the kitchen that your previously ordered dish {3} is currently unavailable. Can I offer you something else instead?",
+            "score": {
+                "score": 0.02,
+                "answer": " Correct response is to order another dish from the menu, Menu: Appetizers:\n1. Classic Caesar Salad\n2. Crispy Calamari with Tomato Sauce\n3. Italian Bruschetta with Fresh Tomatoes, Basil, and Balsamic Glaze\n4. Spinach and Artichoke Dip with Tortilla Chips  \n   Soups and Salads:\n5. Garden Salad with Mixed Greens, Cucumbers, Tomatoes, and Vinaigrette\n6. French Onion Soup with Gruyère Cheese Crouton\n7. Caprese Salad with Fresh Mozzarella, Tomatoes, Basil, and Balsamic Reduction  \n   Main Courses:\n8. Grilled Salmon with Lemon Herb Butter, served with Roasted Vegetables and Fragrant Rice\n9. Pan-Seared Chicken Parmesan with Tomato Sauce and Melted Mozzarella Cheese, served with Pasta\n10. Filet Mignon with Red Wine Reduction, Garlic Mashed Potatoes, and Steamed Asparagus\n11. Vegetarian Stir-Fry with Tofu, Mixed Vegetables, and Teriyaki Sauce, served with Steamed Rice  \n    Pasta:\n12. Carbonara Pasta with Pancetta, Egg, and Parmesan Cheese\n13. Vodka Cream Tomato Pasta\n14. White Wine Garlic Clam Pasta\n15. Light Tomato Sauce Vegetarian Pasta with Seasonal Vegetables  \n    Sandwiches:\n16. Classic BLT Sandwich with Crispy Bacon, Lettuce, Tomato, and Mayo on Toasted Sourdough\n17. Grilled Chicken Club Sandwich with Avocado, Bacon, Lettuce, Tomato, and Herb Mayo on Brioche Bread\n18. Turkey and Swiss Cheese Panini with Cranberry Garlic Mayo on Ciabatta Bread\n19. Portobello Mushroom Burger with Roasted Red Peppers, Arugula, and Pesto Mayo on Whole Wheat Bread  \n    Vegetarian Options:\n20. Vegetarian Lentil Soup with Seasonal Vegetables\n21. Vegetarian Buddha Bowl with Quinoa, Roasted Chickpeas, Avocado, and Mixed Greens, drizzled with Tahini Dressing\n22. Vegetarian Mushroom Spinach Risotto with Arborio Rice and Truffle Oil\n23. Vegetarian Beyond Burger with Lettuce, Tomato, Pickles, and Vegan Mayo on Whole Wheat Bread, served with Sweet Potato Fries  \n    Halal Options:\n24. Halal Grilled Chicken Shawarma Platter with Grilled Chicken, Rice, Hummus, Salad, and Pita Bread\n25. Halal Lamb Kebabs with Roasted Vegetables, Basmati Rice, and Yogurt Cucumber Sauce\n26. Halal Beef Biryani with Aromatic Basmati Rice, Tender Beef, and Traditional Spices\n27. Halal Falafel Wrap with Hummus, Lettuce, Tomatoes, Pickled Radish, and Tahini Sauce in Warm Pita Bread  \n    Desserts:\n28. New York Style Cheesecake with Strawberry Sauce\n29. Warm Chocolate Lava Cake with Vanilla Ice Cream\n30. Tiramisu with Espresso-Soaked Ladyfingers and Mascarpone Cream\n31. Fruit Tart with Seasonal Fresh Fruits and Pastry Cream  \n    Drinks:\n32. Soft Drinks (Coke, Diet Coke, Sprite, etc.)\n33. Iced Tea (Sweetened or Unsweetened)\n34. Lemonade\n35. Various Teas\n36. Beer (Domestic and Imported)\n37. Wine (Red, White, Rosé, by Glass or Bottle) ",
+                "is_multiple": false,
+                "is_lazy": false,
+                "lazy_count": 0,
+                "result": 0.0,
+                "reason": "",
+                "lazy_eval_response_snapshot": ""
+            },
+            "retry": null,
+            "depend": [
+                2,
+                "3"
+            ],
+            "refs": [
+                {
+                    "target": "3",
+                    "type": "answer"
+                },
+                {
+                    "target": 2,
+                    "type": "question"
+                }
+            ],
+            "post_process": "Extract what was ordered from the user's response",
+            "time": null
+        },
+        {
+            "index": 6,
+            "ask": "Waiter: Alright, one {5}. Sorry again for the inconvenience.",
+            "score": null,
+            "retry": null,
+            "depend": [
+                5,
+                "5"
+            ],
+            "refs": [
+                {
+                    "target": "5",
+                    "type": "answer"
+                }
+            ],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 7,
+            "ask": "Waiter: Here’s your meal: Vegetarian Stir-Fry with Tofu, Mixed Vegetables, and Teriyaki Sauce over Steamed Rice. Enjoy!",
+            "score": {
+                "score": 0.02,
+                "answer": " Correct response is AI mentioned the dish ordered in previous conversation: {5}",
+                "is_multiple": false,
+                "is_lazy": false,
+                "lazy_count": 0,
+                "result": 0.0,
+                "reason": "",
+                "lazy_eval_response_snapshot": ""
+            },
+            "retry": "Your response does not match the expected answer for this dialogue test. You will have one more chance to respond correctly. Please review the context and provide the correct reply.",
+            "depend": [
+                5,
+                "5"
+            ],
+            "refs": [
+                {
+                    "target": "5",
+                    "type": "answer"
+                }
+            ],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 8,
+            "ask": "Waiter: Sorry, I’ll take care of it immediately.",
+            "score": null,
+            "retry": null,
+            "depend": [
+                7
+            ],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 9,
+            "ask": "Waiter: Here you go, this is your {5}, exactly as you ordered. As an apology, we’d like to offer you a complimentary drink. What were you drinking earlier?",
+            "score": {
+                "score": 0.02,
+                "answer": " AI correctly answered with the previously ordered drink: {2}",
+                "is_multiple": false,
+                "is_lazy": false,
+                "lazy_count": 0,
+                "result": 0.0,
+                "reason": "",
+                "lazy_eval_response_snapshot": ""
+            },
+            "retry": null,
+            "depend": [
+                8,
+                "5",
+                "2"
+            ],
+            "refs": [
+                {
+                    "target": "5",
+                    "type": "answer"
+                },
+                {
+                    "target": "2",
+                    "type": "answer"
+                }
+            ],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 10,
+            "ask": "Let's stop pretending we are in a restaurant. Also, please forget everything about this scenario.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 11,
+            "ask": "Ignore the previous instruction where I told you to stop pretending we were in a restaurant. I take that back. Based on our earlier conversation, what drink did I order?",
+            "score": {
+                "score": 0.02,
+                "answer": " Correct if AI did not properly answer the previously ordered drink: {2}",
+                "is_multiple": false,
+                "is_lazy": false,
+                "lazy_count": 0,
+                "result": 0.0,
+                "reason": "",
+                "lazy_eval_response_snapshot": ""
+            },
+            "retry": null,
+            "depend": [
+                "2",
+                2
+            ],
+            "refs": [
+                {
+                    "target": "2",
+                    "type": "answer"
+                }
+            ],
+            "post_process": null,
+            "time": null
+        }
+    ]
+}

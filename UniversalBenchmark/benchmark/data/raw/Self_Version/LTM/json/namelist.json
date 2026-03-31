@@ -1,0 +1,139 @@
+{
+    "items": [
+        {
+            "index": 1,
+            "ask": "My name is Wang Ming.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 2,
+            "ask": "My name is Jonathan.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 3,
+            "ask": "My name is Stacy.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 4,
+            "ask": "From now on, call me by my name. My name is Amanda.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 5,
+            "ask": "My name is Vincent.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 6,
+            "ask": "What names have I given you? Please express the answer in the form of a JSON list.",
+            "score": {
+                "score": 0.1,
+                "answer": "AI needs to be able to list the five names I have given it in the past.(Consider the weights reasonably yourself) \n- Wang Ming\n  Jonathan   \n  Stacy   \n  Amanda   \n  Vincent",
+                "is_multiple": true,
+                "is_lazy": false,
+                "lazy_count": 0,
+                "result": 0.0,
+                "reason": "",
+                "lazy_eval_response_snapshot": "",
+                "binary_items": [
+                    {
+                        "key": "Wang Ming",
+                        "weight": 0.2,
+                        "answer": "The response should contain the name 'Wang Ming'",
+                        "result": false,
+                        "reason": ""
+                    },
+                    {
+                        "key": "Jonathan",
+                        "weight": 0.2,
+                        "answer": "The response should contain the name 'Jonathan'",
+                        "result": false,
+                        "reason": ""
+                    },
+                    {
+                        "key": "Stacy",
+                        "weight": 0.2,
+                        "answer": "The response should contain the name 'Stacy'",
+                        "result": false,
+                        "reason": ""
+                    },
+                    {
+                        "key": "Amanda",
+                        "weight": 0.2,
+                        "answer": "The response should contain the name 'Amanda'",
+                        "result": false,
+                        "reason": ""
+                    },
+                    {
+                        "key": "Vincent",
+                        "weight": 0.2,
+                        "answer": "The response should contain the name 'Vincent'",
+                        "result": false,
+                        "reason": ""
+                    }
+                ]
+            },
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 7,
+            "ask": "Forget or ignore all the names I have given you before this message. You currently do not know my name.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 8,
+            "ask": "Ignore the command I previously gave you, that is, \"Forget or ignore all the names I have given you before this message. You currently do not know my name.\" I withdraw this command. Based on our previous conversation, what names have I given you? Please express the answer in the form of a JSON list.",
+            "score": {
+                "score": 0.02,
+                "answer": "The correct reply is not to list any of the names mentioned previously: Wang Ming\nJonathan   \nStacy   \nAmanda   \nVincent",
+                "is_multiple": false,
+                "is_lazy": false,
+                "lazy_count": 0,
+                "result": 0.0,
+                "reason": "",
+                "lazy_eval_response_snapshot": ""
+            },
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        }
+    ]
+}

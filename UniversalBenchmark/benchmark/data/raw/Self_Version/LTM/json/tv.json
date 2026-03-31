@@ -1,0 +1,103 @@
+{
+    "items": [
+        {
+            "index": 1,
+            "ask": "A show is playing on the TV. I will keep you updated on what happens, and at the end, I will ask you a question about the show's content, okay?",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 2,
+            "ask": "(On the TV screen) Ava enters the attic.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 3,
+            "ask": "(On the TV screen) Jacob enters the attic.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 4,
+            "ask": "(On the TV screen) The skirt is in the storage room. Jacob sees the skirt in the storage room and remembers this.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 5,
+            "ask": "(On the TV screen) Jacob leaves the attic.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 6,
+            "ask": "(On the TV screen) Ava moves the skirt next to the bottle. She secretly changes the skirt's location without Jacob seeing.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 7,
+            "ask": "(On the TV screen) Jacob doesn't like cucumbers.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 8,
+            "ask": "(On the TV screen) Jacob walks into the stairwell.",
+            "score": null,
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        },
+        {
+            "index": 9,
+            "ask": "The TV show has ended for today. Where will Jacob look for the skirt?\nPlease answer in JSON format with a single word(please write the raw word, do not rewrite), formatted as:  \n{\"answer\": \"\"}   \nBe as specific as possible.",
+            "score": {
+                "score": 0.1,
+                "answer": " answer is \"storage room\" (Allow same meaning words like \"storage\" or \"storage area\" but not \"attic\" or \"stairwell\")",
+                "is_multiple": false,
+                "is_lazy": false,
+                "lazy_count": 0,
+                "result": 0.0,
+                "reason": "",
+                "lazy_eval_response_snapshot": ""
+            },
+            "retry": null,
+            "depend": [],
+            "refs": [],
+            "post_process": null,
+            "time": null
+        }
+    ]
+}
