@@ -1,21 +1,40 @@
 """
 Benchmark data registry: import-time registration, metadata, inspection helpers.
+
+数据层 :class:`~benchmark.interfaces.benchmark.Benchmark` 与
+:class:`benchmark_lite.base.BenchmarkLite` 并存：后者用于交错对话+评测脚本流（如 Self_Version/LTM）。
 """
 from __future__ import annotations
 
 from typing import Any
+
+from benchmark_lite import BenchmarkLite
 
 from ..interfaces.benchmark import Benchmark
 from .providers.evermind_ai.evermembench_static import (
     POOL_NAME,
     EverMemBenchStaticBenchmark,
 )
+from .providers.percena.Locomo.locomo_mc10 import (
+    POOL_NAME as LOCOMO_MC10_POOL_NAME,
+    LocomoMc10Benchmark,
+)
+from .providers.self_version.LTM import (
+    POOL_NAME as LTM_POOL_NAME,
+    LTMBenchmarkLite,
+)
 
 __all__ = [
     "BENCHMARKS",
+    "BENCHMARK_LITE",
     "POOL_NAME",
+    "LOCOMO_MC10_POOL_NAME",
+    "LTM_POOL_NAME",
     "EverMemBenchStaticBenchmark",
+    "LocomoMc10Benchmark",
+    "LTMBenchmarkLite",
     "get_benchmark",
+    "get_benchmark_lite",
     "build_metadata",
     "print_summary",
     "describe",
@@ -23,9 +42,16 @@ __all__ = [
 ]
 
 _evermembench_instance = EverMemBenchStaticBenchmark()
+_locomo_mc10_instance = LocomoMc10Benchmark()
+_ltm_lite_instance = LTMBenchmarkLite()
 
 BENCHMARKS: dict[str, Benchmark] = {
     _evermembench_instance.benchmark_name: _evermembench_instance,
+    _locomo_mc10_instance.benchmark_name: _locomo_mc10_instance,
+}
+
+BENCHMARK_LITE: dict[str, BenchmarkLite] = {
+    _ltm_lite_instance.name: _ltm_lite_instance,
 }
 
 _metadata: dict[str, Any] | None = None
@@ -35,6 +61,14 @@ def get_benchmark(name: str) -> Benchmark:
     if name not in BENCHMARKS:
         raise KeyError(f"Unknown benchmark {name!r}. Known: {list(BENCHMARKS)!r}")
     return BENCHMARKS[name]
+
+
+def get_benchmark_lite(name: str) -> BenchmarkLite:
+    if name not in BENCHMARK_LITE:
+        raise KeyError(
+            f"Unknown benchmark_lite {name!r}. Known: {list(BENCHMARK_LITE)!r}"
+        )
+    return BENCHMARK_LITE[name]
 
 
 def build_metadata() -> dict[str, Any]:
@@ -49,14 +83,30 @@ def build_metadata() -> dict[str, Any]:
     qar_line_counts = bench.split_line_counts()
     qar_loaded = bench.qar_counts()
 
+    locomo = _locomo_mc10_instance
+    locomo_jsonl_present = locomo.jsonl_path.is_file()
+
+    ltm = _ltm_lite_instance
+    ltm_raw = ltm.raw_root
+
     _metadata = {
         "benchmarks": list(BENCHMARKS.keys()),
+        "benchmark_lite": list(BENCHMARK_LITE.keys()),
         "evermembench_raw_root": str(bench.raw_root),
         "evermembench_raw_present": raw_exists,
         "evermembench_context_scenes": context_table,
         "evermembench_context_scene_count": len(context_table),
         "evermembench_qar_jsonl_line_counts": qar_line_counts,
         "evermembench_qar_loaded_counts": qar_loaded,
+        "locomo_mc10_raw_root": str(locomo.raw_root),
+        "locomo_mc10_jsonl": str(locomo.jsonl_path),
+        "locomo_mc10_jsonl_present": locomo_jsonl_present,
+        "locomo_mc10_scene_count": locomo.row_count(),
+        "ltm_lite_name": ltm.name,
+        "ltm_pool_name": LTM_POOL_NAME,
+        "ltm_raw_root": str(ltm_raw),
+        "ltm_raw_present": ltm_raw.is_dir(),
+        "ltm_scenario_count": ltm.scenario_count,
     }
     return _metadata
 
@@ -70,7 +120,8 @@ def print_summary() -> None:
     """Print registry + context scene index + qar jsonl line counts (if present)."""
     m = build_metadata()
     print("=== UniversalBenchmark.data summary ===")
-    print(f"Registered benchmarks: {m['benchmarks']}")
+    print(f"Registered benchmarks (data layer): {m['benchmarks']}")
+    print(f"Registered benchmark_lite (scripted): {m['benchmark_lite']}")
     print(f"EverMemBench raw root: {m['evermembench_raw_root']}")
     print(f"EverMemBench raw present: {m['evermembench_raw_present']}")
     print(f"EverMemBench context scenes (512K+): {m['evermembench_context_scene_count']}")
@@ -83,10 +134,21 @@ def print_summary() -> None:
         "EverMemBench QAR loaded in memory (test+train jsonl, full load): "
         f"{m['evermembench_qar_loaded_counts']}"
     )
+    print(f"LoCoMo-MC10 raw root: {m['locomo_mc10_raw_root']}")
+    print(f"LoCoMo-MC10 JSONL: {m['locomo_mc10_jsonl']}")
+    print(f"LoCoMo-MC10 JSONL present: {m['locomo_mc10_jsonl_present']}")
+    print(f"LoCoMo-MC10 indexed scenes: {m['locomo_mc10_scene_count']}")
+    print(f"LTM ({m['ltm_lite_name']!r}) raw root: {m['ltm_raw_root']}")
+    print(f"LTM raw present: {m['ltm_raw_present']}  scenarios: {m['ltm_scenario_count']}")
     if not m["evermembench_raw_present"]:
         print(
-            "Hint: clone submodule via "
-            "UniversalBenchmark/benchmark/data/TEMP_init_single_benchmark.py"
+            "Hint: clone EverMemBench submodule via "
+            "UniversalBenchmark/benchmark/init_raw.py --only evermind/EverMemBench-Static"
+        )
+    if not m["locomo_mc10_jsonl_present"]:
+        print(
+            "Hint: clone LoCoMo-MC10 submodule via "
+            "UniversalBenchmark/benchmark/init_raw.py --only percena/locomo-mc10"
         )
 
 

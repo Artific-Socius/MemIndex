@@ -1,3 +1,6 @@
 [submodule "UniversalBenchmark/benchmark/data/raw/EverMind-AI/EverMemBench-Static"]
 	path = UniversalBenchmark/benchmark/data/raw/EverMind-AI/EverMemBench-Static
 	url = https://huggingface.co/datasets/EverMind-AI/EverMemBench-Static
+[submodule "UniversalBenchmark/benchmark/data/raw/percena/Locomo/locomo-mc10"]
+	path = UniversalBenchmark/benchmark/data/raw/percena/Locomo/locomo-mc10
+	url = https://huggingface.co/datasets/Percena/locomo-mc10

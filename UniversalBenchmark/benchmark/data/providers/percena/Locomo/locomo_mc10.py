@@ -1,0 +1,309 @@
+"""
+LoCoMo-MC10: one JSONL row (``question_id``) -> one Scene, one multiple-choice Question (id ``0``).
+
+Loads ``transformed/locomo_mc10_with_name.json`` when present, else ``data/locomo_mc10.json``.
+Uses byte-offset indexing and parses a single line per ``get_scene`` to limit memory.
+
+Context is exposed via ``conversation_history()`` (default) or ``background_text()`` when
+``use_background_text=True``. Very long haystacks may exceed model context; ``benchmark_lite``
+``max_bg_chars`` only truncates the background path, not conversation preload.
+"""
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+from typing import Any, Iterable, Iterator
+
+from .....interfaces.benchmark import Benchmark
+from .....interfaces.evidence import EvidenceBundle
+from .....interfaces.question import Question
+from .....interfaces.scene import ConversationTurn, Scene
+from .....interfaces.scoring import ScoringConfig
+
+POOL_NAME = "locomo_mc10"
+
+RAW_REPO_REL = Path("UniversalBenchmark") / "benchmark" / "data" / "raw" / "percena" / "Locomo" / "locomo-mc10"
+
+_QUESTION_ID_RE = re.compile(rb'"question_id"\s*:\s*"([^"]+)"')
+
+LOCOMO_MC10_EVAL_PROMPT = """You are judging a multiple-choice answer for LoCoMo-MC10 (long-conversation memory).
+
+The model was given prior conversation context, a question, and 10 options (indices 0-9).
+The reference is the single correct answer text (gold option).
+
+Decide whether the model's reply selects or states the same answer as the reference.
+Treat paraphrases or equivalent dates/entities as correct if they clearly match the gold option.
+
+Respond with exactly one token: True or False (capitalized), then a short one-line rationale.
+
+Question (with options as shown to the model):
+{question}
+
+Reference (gold) answer:
+{reference}
+
+Model answer:
+{model_answer}
+
+Judgment (True/False):"""
+
+
+def _find_repo_root(start: Path) -> Path:
+    for p in (start, *start.parents):
+        if (p / ".git").exists():
+            return p
+    raise FileNotFoundError(
+        "Could not find git repository root (.git). "
+        "Run from inside the MemIndex clone, or set paths explicitly."
+    )
+
+
+def _raw_root_from_package() -> Path:
+    return _find_repo_root(Path(__file__).resolve()) / RAW_REPO_REL
+
+
+def _default_jsonl_path(raw_root: Path) -> Path:
+    tr = raw_root / "transformed" / "locomo_mc10_with_name.json"
+    da = raw_root / "data" / "locomo_mc10.json"
+    if tr.is_file():
+        return tr
+    return da
+
+
+def _index_jsonl(path: Path) -> tuple[dict[str, int], list[str]]:
+    """Map question_id -> start byte offset; preserve file order for list_scenes."""
+    offsets: dict[str, int] = {}
+    ordered: list[str] = []
+    with path.open("rb") as f:
+        while True:
+            off = f.tell()
+            line = f.readline()
+            if not line:
+                break
+            if not line.strip():
+                continue
+            m = _QUESTION_ID_RE.search(line)
+            if not m:
+                continue
+            qid = m.group(1).decode("utf-8", errors="replace")
+            offsets[qid] = off
+            ordered.append(qid)
+    return offsets, ordered
+
+
+def _turn_line(turn: dict[str, Any]) -> str:
+    name = turn.get("name") or turn.get("speaker") or turn.get("role") or "?"
+    content = turn.get("content") or turn.get("text") or ""
+    return f"{name}: {content}"
+
+
+def _haystack_sessions_to_flat_turns(haystack: Any) -> list[dict[str, Any]]:
+    if not isinstance(haystack, list):
+        return []
+    flat: list[dict[str, Any]] = []
+    for session in haystack:
+        if not isinstance(session, list):
+            continue
+        for t in session:
+            if isinstance(t, dict):
+                flat.append(t)
+    return flat
+
+
+def _flat_turns_to_conversation_history(flat: list[dict[str, Any]]) -> list[ConversationTurn]:
+    """
+    Pair messages into user/assistant turns. Consecutive ``user`` lines merge into one user_message;
+    ``assistant`` completes the pair. Orphan assistant pairs with a placeholder user; trailing user
+    pairs with empty assistant.
+    """
+    out: list[ConversationTurn] = []
+    pending_user: list[str] = []
+
+    for t in flat:
+        role = str(t.get("role") or "").lower()
+        line = _turn_line(t)
+        if role == "user":
+            pending_user.append(line)
+            continue
+        if pending_user:
+            u = "\n".join(pending_user)
+            out.append(ConversationTurn(user_message=u, assistant_response=line))
+            pending_user = []
+        else:
+            out.append(
+                ConversationTurn(
+                    user_message="[prior context]",
+                    assistant_response=line,
+                )
+            )
+
+    if pending_user:
+        out.append(
+            ConversationTurn(
+                user_message="\n".join(pending_user),
+                assistant_response="",
+            )
+        )
+    return out
+
+
+def _haystack_to_background_text(haystack: Any, *, join_sep: str = "\n\n") -> str:
+    flat = _haystack_sessions_to_flat_turns(haystack)
+    if not flat:
+        return ""
+    parts = [_turn_line(t) for t in flat]
+    return join_sep.join(parts)
+
+
+def _format_mc_question(
+    question: str,
+    choices: list[str],
+) -> str:
+    lines = [question.strip(), "", "Options (choose exactly one; reply with the index 0-9 or the full option text):"]
+    for i, c in enumerate(choices):
+        lines.append(f"{i}. {c}")
+    lines.append("")
+    lines.append("Your answer:")
+    return "\n".join(lines)
+
+
+class LocomoMc10Scene(Scene):
+    """One MC item: preload from haystack_sessions, single Question id ``0``."""
+
+    def __init__(
+        self,
+        row: dict[str, Any],
+        *,
+        scene_id: str,
+        use_background_text: bool = False,
+    ) -> None:
+        self._scene_id = scene_id
+        self._row = row
+        self._use_background_text = use_background_text
+        qid = str(row.get("question_id") or scene_id)
+        choices = list(row.get("choices") or [])
+        if len(choices) != 10:
+            raise ValueError(f"{qid}: expected 10 choices, got {len(choices)}")
+        qtext = _format_mc_question(str(row.get("question", "")), choices)
+        answer = str(row.get("answer", ""))
+        idx = row.get("correct_choice_index")
+        qtype = str(row.get("question_type", ""))
+        self._question = Question(
+            question_id="0",
+            question_text=qtext,
+            ground_truth=answer,
+            evidence=EvidenceBundle(
+                evidence_type="locomo_mc10.mc",
+                payload={
+                    "dataset_question_id": qid,
+                    "choices": choices,
+                    "correct_choice_index": idx,
+                    "question_type": qtype,
+                },
+            ),
+            scoring=ScoringConfig(
+                eval_mode="score",
+                eval_prompt_key="locomo_mc10_mc",
+                max_score=1.0,
+            ),
+        )
+
+    @property
+    def scene_id(self) -> str:
+        return self._scene_id
+
+    @property
+    def scene_name(self) -> str | None:
+        qt = self._row.get("question_type")
+        return str(qt) if qt is not None else None
+
+    @property
+    def task_type(self) -> str | None:
+        return "locomo_mc10_multiple_choice"
+
+    def conversation_history(self) -> list[ConversationTurn]:
+        if self._use_background_text:
+            return []
+        hs = self._row.get("haystack_sessions")
+        flat = _haystack_sessions_to_flat_turns(hs)
+        return _flat_turns_to_conversation_history(flat)
+
+    def background_text(self, *, max_chars: int | None = None, join_sep: str = "\n\n") -> str:
+        if not self._use_background_text:
+            return ""
+        hs = self._row.get("haystack_sessions")
+        text = _haystack_to_background_text(hs, join_sep=join_sep)
+        if max_chars is not None and len(text) > max_chars:
+            return text[:max_chars]
+        return text
+
+    def questions(self) -> Iterable[Question]:
+        def _one() -> Iterator[Question]:
+            yield self._question
+
+        return _one()
+
+
+class LocomoMc10Benchmark(Benchmark):
+    """Percena LoCoMo-MC10: scene_id is JSONL ``question_id`` (e.g. conv-26_q0)."""
+
+    def __init__(
+        self,
+        raw_root: Path | None = None,
+        *,
+        use_background_text: bool = False,
+        jsonl_path: Path | None = None,
+    ) -> None:
+        self._raw_root = raw_root if raw_root is not None else _raw_root_from_package()
+        self._use_background_text = use_background_text
+        self._jsonl_path = jsonl_path if jsonl_path is not None else _default_jsonl_path(self._raw_root)
+        self._offsets: dict[str, int] = {}
+        self._scene_order: list[str] = []
+        if self._jsonl_path.is_file():
+            self._offsets, self._scene_order = _index_jsonl(self._jsonl_path)
+
+    @property
+    def benchmark_name(self) -> str:
+        return "Percena/LoCoMo-MC10"
+
+    @property
+    def eval_prompt(self) -> str:
+        return LOCOMO_MC10_EVAL_PROMPT
+
+    @property
+    def raw_root(self) -> Path:
+        return self._raw_root
+
+    @property
+    def jsonl_path(self) -> Path:
+        return self._jsonl_path
+
+    def row_count(self) -> int:
+        return len(self._scene_order)
+
+    def scene_index_table(self) -> list[dict[str, str]]:
+        return [{"scene_id": sid, "scene_name": sid.rsplit("_q", 1)[0]} for sid in self._scene_order]
+
+    def list_scenes(self) -> Iterable[str]:
+        return list(self._scene_order)
+
+    def _load_row(self, scene_id: str) -> dict[str, Any]:
+        off = self._offsets.get(scene_id)
+        if off is None:
+            raise KeyError(
+                f"Unknown scene_id {scene_id!r} for {self.benchmark_name!r}. "
+                f"Indexed rows: {len(self._scene_order)}"
+            )
+        with self._jsonl_path.open("rb") as f:
+            f.seek(off)
+            line = f.readline()
+        return json.loads(line.decode("utf-8"))
+
+    def get_scene(self, scene_id: str) -> Scene:
+        row = self._load_row(scene_id)
+        return LocomoMc10Scene(
+            row,
+            scene_id=scene_id,
+            use_background_text=self._use_background_text,
+        )

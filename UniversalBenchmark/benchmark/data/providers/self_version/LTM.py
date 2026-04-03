@@ -5,6 +5,9 @@ This dataset is authored as an interleaved sequence of conversation turns and
 evaluation questions. Therefore we implement it as a BenchmarkLite (scripted
 Scenario.turns) instead of the data-layer Benchmark+Scene interface, which
 would force a preload-history + questions() split.
+
+Registry: :data:`benchmark.data.BENCHMARK_LITE` under key ``Self_Version/LTM``;
+use :func:`benchmark.data.get_benchmark_lite`.
 """
 
 from __future__ import annotations
@@ -200,6 +203,19 @@ class LTMBenchmarkLite(BenchmarkLite):
     @property
     def raw_root(self) -> Path:
         return self._raw_root
+
+    @property
+    def scenario_count(self) -> int:
+        """(scale, task) 组合数；不加载各 task JSON 内容。"""
+        return sum(len(s.task_files) for s in self._scales)
+
+    def list_scenario_ids(self) -> list[str]:
+        """与 :meth:`get_scenarios` 中 ``Scenario.id`` 一致，仅由 config 推导。"""
+        ids: list[str] = []
+        for scale in self._scales:
+            for task_name in sorted(scale.task_files.keys()):
+                ids.append(f"{scale.scale_name}:{task_name}")
+        return ids
 
     def get_scenarios(self) -> Iterable[Scenario]:
         scenarios: list[Scenario] = []
