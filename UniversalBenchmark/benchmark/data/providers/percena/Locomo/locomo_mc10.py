@@ -1,8 +1,8 @@
 """
-LoCoMo-MC10: one JSONL row (``question_id``) -> one Scene, one multiple-choice Question (id ``0``).
+LoCoMo-MC10: Groups multiple JSONL rows (``question_id``) into one Scene by parsing `conv-*` from question_id.
 
 Loads ``transformed/locomo_mc10_with_name.json`` when present, else ``data/locomo_mc10.json``.
-Uses byte-offset indexing and parses a single line per ``get_scene`` to limit memory.
+Uses byte-offset indexing to limit memory, grouping rows by conversation to avoid redundant history parsing.
 
 Context is exposed via ``conversation_history()`` (default) or ``background_text()`` when
 ``use_background_text=True``. Very long haystacks may exceed model context; ``benchmark_lite``
@@ -71,9 +71,9 @@ def _default_jsonl_path(raw_root: Path) -> Path:
     return da
 
 
-def _index_jsonl(path: Path) -> tuple[dict[str, int], list[str]]:
-    """Map question_id -> start byte offset; preserve file order for list_scenes."""
-    offsets: dict[str, int] = {}
+def _index_jsonl(path: Path) -> tuple[dict[str, list[int]], list[str]]:
+    """Map scene_id -> list of start byte offsets; preserve file order for list_scenes."""
+    offsets: dict[str, list[int]] = {}
     ordered: list[str] = []
     with path.open("rb") as f:
         while True:
@@ -87,8 +87,11 @@ def _index_jsonl(path: Path) -> tuple[dict[str, int], list[str]]:
             if not m:
                 continue
             qid = m.group(1).decode("utf-8", errors="replace")
-            offsets[qid] = off
-            ordered.append(qid)
+            scene_id = qid.rsplit("_q", 1)[0] if "_q" in qid else qid
+            if scene_id not in offsets:
+                offsets[scene_id] = []
+                ordered.append(scene_id)
+            offsets[scene_id].append(off)
     return offsets, ordered
 
 
@@ -169,45 +172,51 @@ def _format_mc_question(
 
 
 class LocomoMc10Scene(Scene):
-    """One MC item: preload from haystack_sessions, single Question id ``0``."""
+    """Multiple MC items for the same conversation grouped by scene_id."""
 
     def __init__(
         self,
-        row: dict[str, Any],
+        rows: list[dict[str, Any]],
         *,
         scene_id: str,
         use_background_text: bool = False,
     ) -> None:
         self._scene_id = scene_id
-        self._row = row
+        self._primary_row = rows[0]
         self._use_background_text = use_background_text
-        qid = str(row.get("question_id") or scene_id)
-        choices = list(row.get("choices") or [])
-        if len(choices) != 10:
-            raise ValueError(f"{qid}: expected 10 choices, got {len(choices)}")
-        qtext = _format_mc_question(str(row.get("question", "")), choices)
-        answer = str(row.get("answer", ""))
-        idx = row.get("correct_choice_index")
-        qtype = str(row.get("question_type", ""))
-        self._question = Question(
-            question_id="0",
-            question_text=qtext,
-            ground_truth=answer,
-            evidence=EvidenceBundle(
-                evidence_type="locomo_mc10.mc",
-                payload={
-                    "dataset_question_id": qid,
-                    "choices": choices,
-                    "correct_choice_index": idx,
-                    "question_type": qtype,
-                },
-            ),
-            scoring=ScoringConfig(
-                eval_mode="score",
-                eval_prompt_key="locomo_mc10_mc",
-                max_score=1.0,
-            ),
-        )
+        
+        self._questions: list[Question] = []
+        for i, row in enumerate(rows):
+            qid = str(row.get("question_id") or f"{scene_id}_q{i}")
+            choices = list(row.get("choices") or [])
+            if len(choices) != 10:
+                raise ValueError(f"{qid}: expected 10 choices, got {len(choices)}")
+            qtext = _format_mc_question(str(row.get("question", "")), choices)
+            answer = str(row.get("answer", ""))
+            idx = row.get("correct_choice_index")
+            qtype = str(row.get("question_type", ""))
+            
+            self._questions.append(
+                Question(
+                    question_id=qid,
+                    question_text=qtext,
+                    ground_truth=answer,
+                    evidence=EvidenceBundle(
+                        evidence_type="locomo_mc10.mc",
+                        payload={
+                            "dataset_question_id": qid,
+                            "choices": choices,
+                            "correct_choice_index": idx,
+                            "question_type": qtype,
+                        },
+                    ),
+                    scoring=ScoringConfig(
+                        eval_mode="score",
+                        eval_prompt_key="locomo_mc10_mc",
+                        max_score=1.0,
+                    ),
+                )
+            )
 
     @property
     def scene_id(self) -> str:
@@ -215,7 +224,7 @@ class LocomoMc10Scene(Scene):
 
     @property
     def scene_name(self) -> str | None:
-        qt = self._row.get("question_type")
+        qt = self._primary_row.get("question_type")
         return str(qt) if qt is not None else None
 
     @property
@@ -225,28 +234,25 @@ class LocomoMc10Scene(Scene):
     def conversation_history(self) -> list[ConversationTurn]:
         if self._use_background_text:
             return []
-        hs = self._row.get("haystack_sessions")
+        hs = self._primary_row.get("haystack_sessions")
         flat = _haystack_sessions_to_flat_turns(hs)
         return _flat_turns_to_conversation_history(flat)
 
     def background_text(self, *, max_chars: int | None = None, join_sep: str = "\n\n") -> str:
         if not self._use_background_text:
             return ""
-        hs = self._row.get("haystack_sessions")
+        hs = self._primary_row.get("haystack_sessions")
         text = _haystack_to_background_text(hs, join_sep=join_sep)
         if max_chars is not None and len(text) > max_chars:
             return text[:max_chars]
         return text
 
     def questions(self) -> Iterable[Question]:
-        def _one() -> Iterator[Question]:
-            yield self._question
-
-        return _one()
+        return self._questions
 
 
 class LocomoMc10Benchmark(Benchmark):
-    """Percena LoCoMo-MC10: scene_id is JSONL ``question_id`` (e.g. conv-26_q0)."""
+    """Percena LoCoMo-MC10: scene groups multiple queries by parsing `conv-*` from question_id."""
 
     def __init__(
         self,
@@ -258,7 +264,7 @@ class LocomoMc10Benchmark(Benchmark):
         self._raw_root = raw_root if raw_root is not None else _raw_root_from_package()
         self._use_background_text = use_background_text
         self._jsonl_path = jsonl_path if jsonl_path is not None else _default_jsonl_path(self._raw_root)
-        self._offsets: dict[str, int] = {}
+        self._offsets: dict[str, list[int]] = {}
         self._scene_order: list[str] = []
         if self._jsonl_path.is_file():
             self._offsets, self._scene_order = _index_jsonl(self._jsonl_path)
@@ -283,27 +289,30 @@ class LocomoMc10Benchmark(Benchmark):
         return len(self._scene_order)
 
     def scene_index_table(self) -> list[dict[str, str]]:
-        return [{"scene_id": sid, "scene_name": sid.rsplit("_q", 1)[0]} for sid in self._scene_order]
+        return [{"scene_id": sid, "scene_name": sid} for sid in self._scene_order]
 
     def list_scenes(self) -> Iterable[str]:
         return list(self._scene_order)
 
-    def _load_row(self, scene_id: str) -> dict[str, Any]:
-        off = self._offsets.get(scene_id)
-        if off is None:
+    def _load_rows(self, scene_id: str) -> list[dict[str, Any]]:
+        offs = self._offsets.get(scene_id)
+        if not offs:
             raise KeyError(
                 f"Unknown scene_id {scene_id!r} for {self.benchmark_name!r}. "
-                f"Indexed rows: {len(self._scene_order)}"
+                f"Indexed scenes: {len(self._scene_order)}"
             )
+        rows: list[dict[str, Any]] = []
         with self._jsonl_path.open("rb") as f:
-            f.seek(off)
-            line = f.readline()
-        return json.loads(line.decode("utf-8"))
+            for off in offs:
+                f.seek(off)
+                line = f.readline()
+                rows.append(json.loads(line.decode("utf-8")))
+        return rows
 
     def get_scene(self, scene_id: str) -> Scene:
-        row = self._load_row(scene_id)
+        rows = self._load_rows(scene_id)
         return LocomoMc10Scene(
-            row,
+            rows,
             scene_id=scene_id,
             use_background_text=self._use_background_text,
         )

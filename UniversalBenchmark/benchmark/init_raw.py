@@ -269,8 +269,21 @@ def init_one_raw_submodule(repo_root: Path, spec: RawDatasetSpec) -> None:
 
     _lfs_pull_with_retries(target)
 
-    print(f"[{spec.id}] git pull --ff-only (submodule)")
-    _run(["git", "pull", "--ff-only"], cwd=target, check=False)
+    try:
+        branch_out = subprocess.run(
+            ["git", "branch", "--show-current"], 
+            cwd=str(target), 
+            capture_output=True, 
+            text=True, 
+            check=False
+        ).stdout.strip()
+        if branch_out:
+            print(f"[{spec.id}] git pull --ff-only (submodule on branch {branch_out})")
+            _run(["git", "pull", "--ff-only"], cwd=target, check=False)
+        else:
+            print(f"[{spec.id}] target in detached HEAD state, skipping git pull")
+    except Exception:
+        pass
 
     print(f"[{spec.id}] 完成。数据目录: {target}")
 
