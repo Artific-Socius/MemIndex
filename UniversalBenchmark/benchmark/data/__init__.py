@@ -15,6 +15,10 @@ from .providers.evermind_ai.evermembench_static import (
     POOL_NAME,
     EverMemBenchStaticBenchmark,
 )
+from .providers.evermind_ai.evermembench_dynamic import (
+    POOL_NAME as EVERMEMBENCH_DYNAMIC_POOL_NAME,
+    EverMemBenchDynamicBenchmark,
+)
 from .providers.percena.Locomo.locomo_mc10 import (
     POOL_NAME as LOCOMO_MC10_POOL_NAME,
     LocomoMc10Benchmark,
@@ -28,9 +32,11 @@ __all__ = [
     "BENCHMARKS",
     "BENCHMARK_LITE",
     "POOL_NAME",
+    "EVERMEMBENCH_DYNAMIC_POOL_NAME",
     "LOCOMO_MC10_POOL_NAME",
     "LTM_POOL_NAME",
     "EverMemBenchStaticBenchmark",
+    "EverMemBenchDynamicBenchmark",
     "LocomoMc10Benchmark",
     "LTMBenchmarkLite",
     "get_benchmark",
@@ -42,11 +48,13 @@ __all__ = [
 ]
 
 _evermembench_instance = EverMemBenchStaticBenchmark()
+_evermembench_dynamic_instance = EverMemBenchDynamicBenchmark()
 _locomo_mc10_instance = LocomoMc10Benchmark()
 _ltm_lite_instance = LTMBenchmarkLite()
 
 BENCHMARKS: dict[str, Benchmark] = {
     _evermembench_instance.benchmark_name: _evermembench_instance,
+    _evermembench_dynamic_instance.benchmark_name: _evermembench_dynamic_instance,
     _locomo_mc10_instance.benchmark_name: _locomo_mc10_instance,
 }
 
@@ -89,6 +97,10 @@ def build_metadata() -> dict[str, Any]:
     ltm = _ltm_lite_instance
     ltm_raw = ltm.raw_root
 
+    dyn = _evermembench_dynamic_instance
+    dyn_raw = dyn.raw_root
+    dyn_topics = dyn.topic_ids()
+
     _metadata = {
         "benchmarks": list(BENCHMARKS.keys()),
         "benchmark_lite": list(BENCHMARK_LITE.keys()),
@@ -98,6 +110,10 @@ def build_metadata() -> dict[str, Any]:
         "evermembench_context_scene_count": len(context_table),
         "evermembench_qar_jsonl_line_counts": qar_line_counts,
         "evermembench_qar_loaded_counts": qar_loaded,
+        "evermembench_dynamic_raw_root": str(dyn_raw),
+        "evermembench_dynamic_raw_present": dyn_raw.is_dir(),
+        "evermembench_dynamic_topic_count": len(dyn_topics),
+        "evermembench_dynamic_qa_counts_by_topic": dyn.qar_counts_by_topic(),
         "locomo_mc10_raw_root": str(locomo.raw_root),
         "locomo_mc10_jsonl": str(locomo.jsonl_path),
         "locomo_mc10_jsonl_present": locomo_jsonl_present,
@@ -134,6 +150,10 @@ def print_summary() -> None:
         "EverMemBench QAR loaded in memory (test+train jsonl, full load): "
         f"{m['evermembench_qar_loaded_counts']}"
     )
+    print(f"EverMemBench-Dynamic raw root: {m['evermembench_dynamic_raw_root']}")
+    print(f"EverMemBench-Dynamic raw present: {m['evermembench_dynamic_raw_present']}")
+    print(f"EverMemBench-Dynamic topics: {m['evermembench_dynamic_topic_count']}")
+    print(f"EverMemBench-Dynamic QA counts by topic: {m['evermembench_dynamic_qa_counts_by_topic']}")
     print(f"LoCoMo-MC10 raw root: {m['locomo_mc10_raw_root']}")
     print(f"LoCoMo-MC10 JSONL: {m['locomo_mc10_jsonl']}")
     print(f"LoCoMo-MC10 JSONL present: {m['locomo_mc10_jsonl_present']}")
@@ -142,8 +162,18 @@ def print_summary() -> None:
     print(f"LTM raw present: {m['ltm_raw_present']}  scenarios: {m['ltm_scenario_count']}")
     if not m["evermembench_raw_present"]:
         print(
-            "Hint: clone EverMemBench submodule via "
+            "Hint: clone EverMemBench-Static via "
             "UniversalBenchmark/benchmark/init_raw.py --only evermind/EverMemBench-Static"
+        )
+    if m["evermembench_dynamic_raw_present"] and m["evermembench_dynamic_topic_count"] == 0:
+        print(
+            "Hint: EverMemBench-Dynamic raw dir exists but no topic folders with "
+            "dialogue.json + qa_*.json; run git lfs pull in the submodule root."
+        )
+    if not m["evermembench_dynamic_raw_present"]:
+        print(
+            "Hint: clone EverMemBench-Dynamic via "
+            "UniversalBenchmark/benchmark/init_raw.py --only evermind/EverMemBench-Dynamic"
         )
     if not m["locomo_mc10_jsonl_present"]:
         print(

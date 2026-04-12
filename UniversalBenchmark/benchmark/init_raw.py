@@ -71,6 +71,12 @@ _RAW_ENTRIES: tuple[RawDatasetSpec, ...] = (
         provider_rel_posix="evermind_ai",
     ),
     RawDatasetSpec(
+        id="evermind/EverMemBench-Dynamic",
+        git_url="https://huggingface.co/datasets/EverMind-AI/EverMemBench-Dynamic",
+        submodule_rel_posix=f"{_RAW_PREFIX}/EverMind-AI/EverMemBench-Dynamic",
+        provider_rel_posix="evermind_ai",
+    ),
+    RawDatasetSpec(
         id="percena/locomo-mc10",
         git_url="https://huggingface.co/datasets/Percena/locomo-mc10",
         submodule_rel_posix=f"{_RAW_PREFIX}/percena/Locomo/locomo-mc10",
