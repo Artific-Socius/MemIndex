@@ -350,6 +350,8 @@ _LOG_BODY_STYLE_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\b(?:corpus_id|scene_id)=[^\s)|]+"), "magenta"),
     (re.compile(r"(?:[A-Za-z]:\\|\\\\)[^\s|]+"), "bright_blue"),
     (re.compile(r"\b[\w.\-]+(?:/[\w.\-]+)+\b"), "cyan"),
+    (re.compile(r"\sFAIL\s"), "red"),
+    (re.compile(r"\sPASS\s"), "green"),
 ]
 
 
