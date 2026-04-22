@@ -34,13 +34,19 @@
         --model openai/gpt-4o \\
         --verbose \\
         --output results.json
+
+    # 输出文件名模板（basename）：{time}、{time:%Y-%m-%d}、{n} 自增等
+    python run_benchmark_lite.py ... --output reports/run_{time}_{n}.json
 """
 
 from __future__ import annotations
 
 import argparse
 import importlib
+import os
+import re
 import sys
+from datetime import datetime
 from typing import Type
 
 from loguru import logger
@@ -77,6 +83,143 @@ MEMORY_TYPES: dict[str, Type[MemoryMixin]] = {
     "mem0": Mem0Memory,
     "memecho": MemechoMemory,
 }
+
+# --output 文件名模板：{time} / {time:<strftime>}、{n}（同目录自增）；其余 {…} 原样保留
+_DEFAULT_TIME_STRFTIME = "%Y%m%d_%H%M%S"
+_TIME_WITH_FMT_RE = re.compile(r"\{time:([^}]*)\}")
+_MAX_QUESTIONS_RANGE_RE = re.compile(r"^(\d+)-(\d+)$")
+
+
+def resolve_output_path(
+    template: str,
+    *,
+    now: datetime | None = None,
+) -> str:
+    """将 ``--output`` 模板解析为实际写入路径。
+
+    仅在**文件名**（basename）中解析占位符；目录部分不展开。
+
+    白名单占位符：
+
+    - ``{time}`` → 默认 ``YYYYMMDD_HHMMSS``（``%Y%m%d_%H%M%S``）
+    - ``{time:<strftime>}`` → 按给定格式 ``strftime``；格式非法或替换失败时保留原文
+    - ``{n}`` → 在输出目录下按已有匹配文件的最大编号 ``+1``；目录不存在或无匹配则从 ``1`` 开始。
+      若模板中有多个 ``{n}``，扫描时要求编号在各处一致（同一捕获组）。
+      若解析出的路径已存在（例如目录扫描与磁盘不同步），则在含 ``{n}`` 时继续增大 ``n`` 直至得到不存在的路径，避免覆盖。
+
+    其它 ``{...}``、不完整的 ``{`` / ``}`` 均不处理、不抛错。
+    """
+    template = os.path.normpath(template)
+    dirpath, basename = os.path.split(template)
+    scan_dir = dirpath if dirpath else "."
+    dt = now if now is not None else datetime.now()
+
+    basename_t = _interpolate_time_placeholders(basename, dt)
+    if "{n}" not in basename_t:
+        return os.path.join(dirpath, basename_t) if dirpath else basename_t
+
+    n_val = _compute_initial_n_from_existing_files(scan_dir, basename_t)
+    while True:
+        resolved_basename = basename_t.replace("{n}", str(n_val))
+        out_path = (
+            os.path.join(dirpath, resolved_basename) if dirpath else resolved_basename
+        )
+        if not os.path.exists(out_path):
+            return out_path
+        n_val += 1
+
+
+def _interpolate_time_placeholders(basename: str, now: datetime) -> str:
+    """先处理 ``{time:...}``，再处理独立的 ``{time}``，避免误伤 ``{timeout}`` 等。"""
+
+    def repl_fmt(m: re.Match[str]) -> str:
+        raw = m.group(1)
+        fmt = raw.strip()
+        if not fmt:
+            return m.group(0)
+        try:
+            return now.strftime(fmt)
+        except (ValueError, OSError):
+            return m.group(0)
+
+    out = _TIME_WITH_FMT_RE.sub(repl_fmt, basename)
+    try:
+        return out.replace("{time}", now.strftime(_DEFAULT_TIME_STRFTIME))
+    except (ValueError, OSError):
+        return out
+
+
+def _compute_initial_n_from_existing_files(
+    scan_dir: str,
+    basename_with_n: str,
+) -> int:
+    """根据目录中已有文件名，返回模板 ``basename_with_n`` 中 ``{n}`` 的下一个候选编号。"""
+    parts = basename_with_n.split("{n}")
+    # 至少两段：前缀 + 后缀（允许后缀为空）。多个 {n} 时后续编号须与第一处相同（\1）。
+    pattern = re.escape(parts[0]) + r"(\d+)"
+    for i in range(1, len(parts)):
+        pattern += re.escape(parts[i])
+        if i < len(parts) - 1:
+            pattern += r"\1"
+
+    compiled = re.compile(pattern + r"\Z")
+    max_n = 0
+    found_any = False
+    try:
+        names = os.listdir(scan_dir)
+    except OSError:
+        names = []
+
+    for name in names:
+        m = compiled.match(name)
+        if m:
+            found_any = True
+            max_n = max(max_n, int(m.group(1)))
+
+    return (max_n + 1) if found_any else 1
+
+
+def parse_max_questions_spec(
+    raw: str | None,
+) -> tuple[int, int] | None:
+    """解析 ``--max-questions`` 参数。
+
+    支持两种格式：
+    - ``N``：选择问题索引 ``[0, N)``（即前 N 个）
+    - ``A-B``：选择问题索引 ``[A, B]``（闭区间）
+
+    返回值使用半开区间 ``(start_inclusive, end_exclusive)``。
+    """
+    if raw is None:
+        return None
+
+    value = raw.strip()
+    if not value:
+        raise argparse.ArgumentTypeError(
+            "--max-questions 不能为空；请使用 N 或 A-B"
+        )
+
+    if value.isdigit():
+        end_exclusive = int(value)
+        if end_exclusive <= 0:
+            raise argparse.ArgumentTypeError(
+                "--max-questions 的单数字格式必须 > 0"
+            )
+        return (0, end_exclusive)
+
+    m = _MAX_QUESTIONS_RANGE_RE.fullmatch(value)
+    if m is None:
+        raise argparse.ArgumentTypeError(
+            "--max-questions 仅支持 N 或 A-B（如 30 或 5-10）"
+        )
+
+    start = int(m.group(1))
+    end = int(m.group(2))
+    if end < start:
+        raise argparse.ArgumentTypeError(
+            "--max-questions 范围格式要求 end >= start（如 5-10）"
+        )
+    return (start, end + 1)
 
 
 def load_class(dotted_path: str) -> type:
@@ -198,11 +341,12 @@ def main() -> None:
     )
     parser.add_argument(
         "--max-questions",
-        type=int,
+        type=str,
         default=None,
         help=(
-            "每个 Scene 最多评估的问题数（仅 UniversalAdapter 生效）。"
-            "用于 debug/快速验证时限制问题数量"
+            "限制每个 Scene 的评估问题索引（仅 UniversalAdapter 生效）。"
+            "支持 N（前 N 个，等价索引 [0, N)）"
+            "或 A-B（闭区间索引 [A, B]，如 5-10）"
         ),
     )
     parser.add_argument(
@@ -238,7 +382,13 @@ def main() -> None:
     parser.add_argument(
         "--output", "-o",
         default=None,
-        help="将结果保存到指定文件（JSON 格式）",
+        help=(
+            "将结果保存到指定文件（JSON 格式）。"
+            "文件名支持模板占位符（仅 basename）："
+            "{time}（默认 %%Y%%m%%d_%%H%%M%%S）、"
+            "{time:<strftime>}、{n}（同目录下按已有文件自增）；"
+            "其它 {…} 原样保留"
+        ),
     )
     parser.add_argument(
         "--no-progress",
@@ -247,6 +397,7 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+    max_questions_range = parse_max_questions_spec(args.max_questions)
 
     def run_pipeline() -> BenchmarkResult:
         # ── 加载环境配置 ────────────────────────────────────
@@ -278,7 +429,7 @@ def main() -> None:
                 eval_model=args.eval_model,
                 scene_ids=args.scene_ids,
                 max_bg_chars=args.max_bg_chars,
-                max_questions=args.max_questions,
+                question_index_range=max_questions_range,
             )
             logger.info(
                 f"[benchmark] 数据层 Benchmark 已通过 UniversalAdapter 适配: "
@@ -311,6 +462,11 @@ def main() -> None:
             extra_cfg["max_bg_chars"] = args.max_bg_chars
         if args.max_questions is not None:
             extra_cfg["max_questions"] = args.max_questions
+            if max_questions_range is not None:
+                extra_cfg["max_questions_index_range"] = [
+                    max_questions_range[0],
+                    max_questions_range[1] - 1,
+                ]
         if args.max_turns is not None:
             extra_cfg["max_turns"] = args.max_turns
         if args.read_only:
@@ -362,10 +518,11 @@ def main() -> None:
 
     # ── 保存 JSON ───────────────────────────────────────────
     if args.output:
+        resolved_output = resolve_output_path(args.output)
         json_str = to_json(result)
-        with open(args.output, "w", encoding="utf-8") as f:
+        with open(resolved_output, "w", encoding="utf-8") as f:
             f.write(json_str)
-        print(f"结果已保存到: {args.output}")
+        print(f"结果已保存到: {resolved_output}")
 
 
 if __name__ == "__main__":

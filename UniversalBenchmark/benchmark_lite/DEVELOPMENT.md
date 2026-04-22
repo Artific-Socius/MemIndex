@@ -60,7 +60,11 @@ class MyScene(Scene):
             question_id="q0",
             question_text="我叫什么名字？",
             ground_truth="小明",
-            evidence=EvidenceBundle(evidence_type="none", payload={}),
+            evidence=EvidenceBundle(
+                evidence_type="my_dataset.qa",
+                payload={},
+                references=["turn_0"],
+            ),
             scoring=ScoringConfig(eval_mode="keyword", eval_prompt_key="default"),
         )
 

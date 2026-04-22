@@ -220,6 +220,7 @@ def _build_question(
                 "options": opts,
                 "source_id": row.get("id"),
             },
+            allow_missing_references=True,
         ),
         scoring=ScoringConfig(
             eval_mode="score",

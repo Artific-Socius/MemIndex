@@ -27,10 +27,16 @@ question = Question(
     question_id="q001",
     question_text="主角的名字是什么？",
     ground_truth="张三",
-    evidence=EvidenceBundle(evidence_type="none", payload={}),
+    evidence=EvidenceBundle(
+        evidence_type="my_dataset.qa",
+        payload={},
+        references=["doc-1", "turn-3"],
+    ),
     scoring=ScoringConfig(eval_mode="keyword", eval_prompt_key="default"),
 )
 ```
+
+`EvidenceBundle` 默认要求提供非空的 ``references``（数据集原生 ref 字符串列表，便于事后分析「答对依赖哪些片段」）。若数据集确实没有 ref，必须显式设置 ``allow_missing_references=True``。
 
 `Question` 是 frozen dataclass，直接构造即可。关键字段：
 
@@ -38,6 +44,7 @@ question = Question(
 |------|------|------|
 | `question_text` | `str` | 发送给 Agent 的问题 |
 | `ground_truth` | `Any` | 标准答案，传给评分器 |
+| `evidence.references` | `list[str] \| None` | 标准引用 id（导出 JSON 时会写入 `metadata.evidence.payload`） |
 | `scoring.eval_mode` | `str` | 选择哪个评分器（见下文） |
 | `scoring.max_score` | `float` | 该题满分，默认 `1.0` |
 
@@ -150,14 +157,22 @@ class MemoryTestScene(Scene):
             question_id="name",
             question_text="我叫什么名字？",
             ground_truth="小明",
-            evidence=EvidenceBundle(evidence_type="none", payload={}),
+            evidence=EvidenceBundle(
+                evidence_type="my_dataset.qa",
+                payload={},
+                references=["turn_0"],
+            ),
             scoring=ScoringConfig(eval_mode="keyword", eval_prompt_key="default"),
         )
         yield Question(
             question_id="hobby",
             question_text="我有哪些爱好？",
             ground_truth="篮球和吉他",
-            evidence=EvidenceBundle(evidence_type="none", payload={}),
+            evidence=EvidenceBundle(
+                evidence_type="my_dataset.qa",
+                payload={},
+                references=["turn_1"],
+            ),
             scoring=ScoringConfig(eval_mode="binary", eval_prompt_key="default"),
         )
 

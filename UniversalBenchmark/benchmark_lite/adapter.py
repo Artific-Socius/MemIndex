@@ -71,8 +71,13 @@ class UniversalAdapter(BenchmarkLite):
         Maximum characters to keep from ``background_text()``.
         ``None`` means no limit (use the full corpus).
     max_questions:
-        Maximum number of evaluation questions per scene.
+        [兼容旧参数] Maximum number of evaluation questions per scene
+        from the beginning (equivalent to index range ``[0, max_questions)``).
         ``None`` means all questions.
+    question_index_range:
+        Optional question index range in half-open form
+        ``(start_inclusive, end_exclusive)``.
+        When provided, this takes precedence over ``max_questions``.
     """
 
     def __init__(
@@ -82,12 +87,14 @@ class UniversalAdapter(BenchmarkLite):
         scene_ids: list[str] | None = None,
         max_bg_chars: int | None = None,
         max_questions: int | None = None,
+        question_index_range: tuple[int, int] | None = None,
     ) -> None:
         self._benchmark = data_benchmark
         self._eval_model = eval_model
         self._scene_ids = scene_ids
         self._max_bg_chars = max_bg_chars
         self._max_questions = max_questions
+        self._question_index_range = question_index_range
         self._evaluator_cache: dict[str, BaseEvaluator] = {}
 
         self._bench_eval_prompt: str = getattr(
@@ -245,7 +252,13 @@ class UniversalAdapter(BenchmarkLite):
 
         turns: list[Turn] = []
         for i, q in enumerate(scene.questions()):
-            if self._max_questions is not None and i >= self._max_questions:
+            if self._question_index_range is not None:
+                start, end_exclusive = self._question_index_range
+                if i < start:
+                    continue
+                if i >= end_exclusive:
+                    break
+            elif self._max_questions is not None and i >= self._max_questions:
                 break
             turn = Turn(
                 user_input=q.question_text,
@@ -263,7 +276,15 @@ class UniversalAdapter(BenchmarkLite):
             )
             turns.append(turn)
 
-        if self._max_questions is not None:
+        if self._question_index_range is not None:
+            start, end_exclusive = self._question_index_range
+            logger.info(
+                f"  Scene '{scene.scene_id}': "
+                f"{len(turns)} questions (index range "
+                f"[{start}, {max(start, end_exclusive - 1)}]) "
+                f"from {scene.question_count()}"
+            )
+        elif self._max_questions is not None:
             logger.info(
                 f"  Scene '{scene.scene_id}': "
                 f"{len(turns)} questions (limited from "

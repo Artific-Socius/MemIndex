@@ -7,13 +7,17 @@ Uses byte-offset indexing to limit memory, grouping rows by conversation to avoi
 Context is exposed via ``conversation_history()`` (default) or ``background_text()`` when
 ``use_background_text=True``. Very long haystacks may exceed model context; ``benchmark_lite``
 ``max_bg_chars`` only truncates the background path, not conversation preload.
+
+Each turn line is prefixed with ``haystack_session_datetimes`` / ``haystack_session_ids`` when
+present in the row (e.g. ``[session_time: 2023-05-08T13:56:00] [session_id: session_1] ...``)
+so relative-time questions remain grounded after flattening.
 """
 from __future__ import annotations
 
 import json
 import re
 from pathlib import Path
-from typing import Any, Iterable, Iterator
+from typing import Any, Iterable
 
 from .....interfaces.benchmark import Benchmark
 from .....interfaces.evidence import EvidenceBundle
@@ -26,6 +30,10 @@ POOL_NAME = "locomo_mc10"
 RAW_REPO_REL = Path("UniversalBenchmark") / "benchmark" / "data" / "raw" / "percena" / "Locomo" / "locomo-mc10"
 
 _QUESTION_ID_RE = re.compile(rb'"question_id"\s*:\s*"([^"]+)"')
+
+# Internal keys on flattened turn dicts (copies only; not from dataset JSON).
+_SESSION_DATETIME_KEY = "_session_datetime"
+_SESSION_ID_KEY = "_session_id"
 
 LOCOMO_MC10_EVAL_PROMPT = """You are judging a multiple-choice answer for LoCoMo-MC10 (long-conversation memory).
 
@@ -98,19 +106,45 @@ def _index_jsonl(path: Path) -> tuple[dict[str, list[int]], list[str]]:
 def _turn_line(turn: dict[str, Any]) -> str:
     name = turn.get("name") or turn.get("speaker") or turn.get("role") or "?"
     content = turn.get("content") or turn.get("text") or ""
-    return f"{name}: {content}"
+    body = f"{name}: {content}"
+    dt = turn.get(_SESSION_DATETIME_KEY)
+    sid = turn.get(_SESSION_ID_KEY)
+    prefixes: list[str] = []
+    if dt is not None and str(dt).strip():
+        prefixes.append(f"[session_time: {dt}]")
+    if sid is not None and str(sid).strip():
+        prefixes.append(f"[session_id: {sid}]")
+    if prefixes:
+        return f"{' '.join(prefixes)} {body}"
+    return body
 
 
-def _haystack_sessions_to_flat_turns(haystack: Any) -> list[dict[str, Any]]:
+def _row_haystack_to_flat_turns(row: dict[str, Any]) -> list[dict[str, Any]]:
+    """Flatten haystack_sessions and attach per-session datetime / id from the row."""
+    haystack = row.get("haystack_sessions")
     if not isinstance(haystack, list):
         return []
+    datetimes = row.get("haystack_session_datetimes") or []
+    session_ids = row.get("haystack_session_ids") or []
+    if not isinstance(datetimes, list):
+        datetimes = []
+    if not isinstance(session_ids, list):
+        session_ids = []
     flat: list[dict[str, Any]] = []
-    for session in haystack:
+    for si, session in enumerate(haystack):
         if not isinstance(session, list):
             continue
+        dt = datetimes[si] if si < len(datetimes) else None
+        sid = session_ids[si] if si < len(session_ids) else None
         for t in session:
-            if isinstance(t, dict):
-                flat.append(t)
+            if not isinstance(t, dict):
+                continue
+            turn = dict(t)
+            if dt is not None:
+                turn[_SESSION_DATETIME_KEY] = str(dt)
+            if sid is not None:
+                turn[_SESSION_ID_KEY] = str(sid)
+            flat.append(turn)
     return flat
 
 
@@ -151,8 +185,8 @@ def _flat_turns_to_conversation_history(flat: list[dict[str, Any]]) -> list[Conv
     return out
 
 
-def _haystack_to_background_text(haystack: Any, *, join_sep: str = "\n\n") -> str:
-    flat = _haystack_sessions_to_flat_turns(haystack)
+def _haystack_to_background_text(row: dict[str, Any], *, join_sep: str = "\n\n") -> str:
+    flat = _row_haystack_to_flat_turns(row)
     if not flat:
         return ""
     parts = [_turn_line(t) for t in flat]
@@ -195,7 +229,13 @@ class LocomoMc10Scene(Scene):
             answer = str(row.get("answer", ""))
             idx = row.get("correct_choice_index")
             qtype = str(row.get("question_type", ""))
-            
+            raw_ev = row.get("evidence")
+            if isinstance(raw_ev, list):
+                ref_strings = [str(x) for x in raw_ev]
+            else:
+                ref_strings = []
+            allow_miss = len(ref_strings) == 0
+
             self._questions.append(
                 Question(
                     question_id=qid,
@@ -209,6 +249,8 @@ class LocomoMc10Scene(Scene):
                             "correct_choice_index": idx,
                             "question_type": qtype,
                         },
+                        references=ref_strings if ref_strings else None,
+                        allow_missing_references=allow_miss,
                     ),
                     scoring=ScoringConfig(
                         eval_mode="score",
@@ -234,15 +276,13 @@ class LocomoMc10Scene(Scene):
     def conversation_history(self) -> list[ConversationTurn]:
         if self._use_background_text:
             return []
-        hs = self._primary_row.get("haystack_sessions")
-        flat = _haystack_sessions_to_flat_turns(hs)
+        flat = _row_haystack_to_flat_turns(self._primary_row)
         return _flat_turns_to_conversation_history(flat)
 
     def background_text(self, *, max_chars: int | None = None, join_sep: str = "\n\n") -> str:
         if not self._use_background_text:
             return ""
-        hs = self._primary_row.get("haystack_sessions")
-        text = _haystack_to_background_text(hs, join_sep=join_sep)
+        text = _haystack_to_background_text(self._primary_row, join_sep=join_sep)
         if max_chars is not None and len(text) > max_chars:
             return text[:max_chars]
         return text

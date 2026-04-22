@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
+from dataclasses import asdict
 from typing import Any
+
+from benchmark.interfaces.evidence import EvidenceBundle
 
 from .types import (
     AggregateResult,
@@ -219,6 +222,40 @@ def _compat_aggregate_dict(agg: dict[str, Any]) -> dict[str, Any]:
     return d
 
 
+def _evidence_to_compat_export_dict(ev: Any) -> Any:
+    """Flatten EvidenceBundle for JSON export: keep schema as {evidence_type, payload} only.
+
+    ``references`` and optional ``allow_missing_references`` are folded into
+    ``payload`` so the on-disk shape matches historical exports.
+    """
+    if ev is None:
+        return None
+    if isinstance(ev, EvidenceBundle):
+        d = asdict(ev)
+    elif isinstance(ev, dict) and "evidence_type" in ev and "payload" in ev:
+        d = dict(ev)
+    else:
+        return ev
+
+    payload = dict(d.get("payload") or {})
+    refs = d.get("references")
+    if refs is not None:
+        payload["references"] = list(refs)
+    if d.get("allow_missing_references"):
+        payload["allow_missing_references"] = True
+    return {
+        "evidence_type": d["evidence_type"],
+        "payload": payload,
+    }
+
+
+def _compat_turn_metadata(meta: dict[str, Any]) -> dict[str, Any]:
+    out = dict(meta)
+    if "evidence" in out:
+        out["evidence"] = _evidence_to_compat_export_dict(out["evidence"])
+    return out
+
+
 def _compat_scenario_dict(sr: dict[str, Any]) -> dict[str, Any]:
     """保持旧版 scenario 键名（id, description, turns），追加新字段。"""
     turns_out: list[dict[str, Any]] = []
@@ -233,7 +270,7 @@ def _compat_scenario_dict(sr: dict[str, Any]) -> dict[str, Any]:
             "score": _compat_score_dict(tr["score"]) if tr.get("score") else None,
         }
         if tr.get("metadata"):
-            turn_d["metadata"] = tr["metadata"]
+            turn_d["metadata"] = _compat_turn_metadata(tr["metadata"])
         if tr.get("message_trace"):
             turn_d["message_trace"] = tr["message_trace"]
         if tr.get("depends_on_turn_indices"):
