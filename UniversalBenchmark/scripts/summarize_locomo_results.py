@@ -34,6 +34,7 @@ from rich.table import Table
 from rich.text import Text
 
 SourceKind = Literal["replay", "fallback_normal", "normal"]
+QuestionKey = tuple[str, str]
 
 _SOURCE_STYLE: dict[SourceKind, str] = {
     "replay": "bold green",
@@ -188,6 +189,122 @@ class CategoryStat:
     accuracy_percent: float
 
 
+@dataclass
+class ErrorFilterReport:
+    blocked_pairs: set[QuestionKey]
+    blocked_errors: int = 0
+    ambiguous_errors: int = 0
+    not_found_errors: int = 0
+    invalid_errors: int = 0
+
+
+def _normalize_text(value: Any) -> str:
+    return str(value).strip()
+
+
+def _turn_question_key(turn: dict[str, Any]) -> QuestionKey | None:
+    """从 evaluation turn 提取 (question_text, ground_truth) 键。
+
+    question_text 优先使用 metadata.question_text，缺失时回退 user_input。
+    """
+    q: Any = None
+    meta = turn.get("metadata")
+    if isinstance(meta, dict):
+        q_meta = meta.get("question_text")
+        if isinstance(q_meta, str) and q_meta.strip():
+            q = q_meta
+    if q is None:
+        q = turn.get("user_input")
+    if not isinstance(q, str):
+        return None
+    gt: Any = None
+    if isinstance(meta, dict):
+        gt_meta = meta.get("ground_truth")
+        if gt_meta is not None:
+            gt = gt_meta
+    if gt is None:
+        gt = turn.get("reference")
+    if gt is None:
+        gt = ""
+    return (_normalize_text(q), _normalize_text(gt))
+
+
+def _collect_turn_question_keys(data: dict[str, Any]) -> dict[QuestionKey, int]:
+    counts: dict[QuestionKey, int] = defaultdict(int)
+    for sc in data.get("scenarios", []):
+        if not isinstance(sc, dict):
+            continue
+        for turn in sc.get("turns", []):
+            if not isinstance(turn, dict):
+                continue
+            if turn.get("type") != "evaluation":
+                continue
+            key = _turn_question_key(turn)
+            if key is None:
+                continue
+            counts[key] += 1
+    return dict(counts)
+
+
+def build_error_blocklist_for_data(
+    errors: list[dict[str, Any]],
+    data: dict[str, Any],
+    *,
+    source_label: str = "",
+) -> ErrorFilterReport:
+    """按 question 文本唯一匹配，构建单文件屏蔽集合。"""
+    report = ErrorFilterReport(blocked_pairs=set())
+    available = _collect_turn_question_keys(data)
+    if not available:
+        hint = f" file={source_label}" if source_label else ""
+        print(
+            f"[error-filter] 候选题为空，未提取到 evaluation question key，跳过屏蔽。{hint}",
+            file=sys.stderr,
+        )
+        return report
+
+    for idx, err in enumerate(errors):
+        q_raw = err.get("question")
+        if not isinstance(q_raw, str):
+            report.invalid_errors += 1
+            continue
+        q = _normalize_text(q_raw)
+
+        q_matches = [k for k in available.keys() if q in  k[0] ]
+        if not q_matches:
+            report.not_found_errors += 1
+            # print(
+            #     f"[error-filter] 未匹配 question（idx={idx}, mode=prefix）: {q[:120]}",
+            #     file=sys.stderr,
+            # )
+            continue
+        n_total = sum(available[k] for k in q_matches)
+        n_distinct = len(q_matches)
+        if n_distinct == 1 and n_total == 1:
+            report.blocked_pairs.add(q_matches[0])
+            report.blocked_errors += 1
+            continue
+        report.ambiguous_errors += 1
+        print(
+            f"[error-filter] question 匹配到多个题目，跳过屏蔽（idx={idx}, matches={n_total}, mode=prefix）: "
+            f"{q[:120]}",
+            file=sys.stderr,
+        )
+    return report
+
+
+def load_errors_json(errors_path: Path) -> list[dict[str, Any]]:
+    raw = errors_path.read_text(encoding="utf-8")
+    data = json.loads(raw)
+    if not isinstance(data, list):
+        raise ValueError(f"errors JSON 顶层必须为数组: {errors_path}")
+    out: list[dict[str, Any]] = []
+    for x in data:
+        if isinstance(x, dict):
+            out.append(x)
+    return out
+
+
 def _safe_int(x: Any, default: int = 0) -> int:
     try:
         return int(x)
@@ -265,7 +382,10 @@ def question_type_from_turn(turn: dict[str, Any]) -> str:
 
 
 def aggregate_question_types(
-    data: dict[str, Any], *, prefer_replay: bool
+    data: dict[str, Any],
+    *,
+    prefer_replay: bool,
+    blocked_pairs: set[QuestionKey] | None = None,
 ) -> tuple[dict[str, tuple[int, int]], int]:
     """
     返回 (各题型 (passed, total), 无法判分的 evaluation 条数)。
@@ -280,6 +400,9 @@ def aggregate_question_types(
             if not isinstance(turn, dict):
                 continue
             if turn.get("type") != "evaluation":
+                continue
+            tkey = _turn_question_key(turn)
+            if blocked_pairs is not None and tkey is not None and tkey in blocked_pairs:
                 continue
             qt = question_type_from_turn(turn)
             p = evaluation_turn_passed(turn, prefer_replay=prefer_replay)
@@ -323,12 +446,46 @@ def iter_json_files(root: Path, *, recursive: bool) -> list[Path]:
     return sorted(root.glob("*.json"))
 
 
+def extract_passed_total_from_turns(
+    data: dict[str, Any],
+    *,
+    prefer_replay: bool,
+    source: SourceKind,
+    blocked_pairs: set[QuestionKey] | None = None,
+) -> tuple[int, int, int]:
+    """按 turn 重算 passed/total，返回 (passed, total, bad_unscored)."""
+    passed = 0
+    total = 0
+    bad = 0
+    for sc in data.get("scenarios", []):
+        if not isinstance(sc, dict):
+            continue
+        for turn in sc.get("turns", []):
+            if not isinstance(turn, dict):
+                continue
+            if turn.get("type") != "evaluation":
+                continue
+            tkey = _turn_question_key(turn)
+            if blocked_pairs is not None and tkey is not None and tkey in blocked_pairs:
+                continue
+            p = evaluation_turn_passed(turn, prefer_replay=prefer_replay)
+            if p is None:
+                bad += 1
+                continue
+            total += 1
+            if p:
+                passed += 1
+    return passed, total, bad
+
+
 def run_summary(
     input_dir: Path,
     *,
     name_pattern: re.Pattern[str],
     prefer_replay: bool,
     recursive: bool,
+    exclude_errors: bool = False,
+    errors: list[dict[str, Any]] | None = None,
 ) -> tuple[list[FileStat], dict[str, Any], dict[str, tuple[int, int]]]:
     """返回各文件统计、跳过原因、按题型合并的 (passed, total)。"""
     skipped: dict[str, int] = {
@@ -339,6 +496,10 @@ def run_summary(
         "no_stats": 0,
         "zero_total": 0,
         "turn_no_pass_field": 0,
+        "error_blocked_turns": 0,
+        "error_match_ambiguous": 0,
+        "error_match_not_found": 0,
+        "error_match_invalid": 0,
     }
     stats: list[FileStat] = []
     merged_qt: dict[str, tuple[int, int]] = defaultdict(lambda: (0, 0))
@@ -364,6 +525,25 @@ def run_summary(
         if passed is None or total is None or source is None:
             skipped["no_stats"] += 1
             continue
+        blocked_pairs: set[QuestionKey] | None = None
+        if exclude_errors and errors is not None:
+            report = build_error_blocklist_for_data(
+                errors,
+                data,
+                source_label=path.name,
+            )
+            blocked_pairs = report.blocked_pairs
+            skipped["error_match_ambiguous"] += report.ambiguous_errors
+            skipped["error_match_not_found"] += report.not_found_errors
+            skipped["error_match_invalid"] += report.invalid_errors
+            skipped["error_blocked_turns"] += len(report.blocked_pairs)
+            passed, total, bad_turns = extract_passed_total_from_turns(
+                data,
+                prefer_replay=prefer_replay,
+                source=source,
+                blocked_pairs=blocked_pairs,
+            )
+            skipped["turn_no_pass_field"] += bad_turns
         if total == 0:
             skipped["zero_total"] += 1
             continue
@@ -385,8 +565,13 @@ def run_summary(
             )
         )
 
-        per_file_qt, bad_turns = aggregate_question_types(data, prefer_replay=prefer_replay)
-        skipped["turn_no_pass_field"] += bad_turns
+        per_file_qt, bad_turns = aggregate_question_types(
+            data,
+            prefer_replay=prefer_replay,
+            blocked_pairs=blocked_pairs,
+        )
+        if not exclude_errors:
+            skipped["turn_no_pass_field"] += bad_turns
         for qt, (p_i, t_i) in per_file_qt.items():
             op, ot = merged_qt[qt]
             merged_qt[qt] = (op + p_i, ot + t_i)
@@ -410,11 +595,16 @@ def _print_plain_summary(
     total_questions: int,
     weighted_acc: float,
     categories: list[CategoryStat],
+    exclude_errors: bool,
+    errors_json: Path | None,
 ) -> None:
     print(f"目录: {input_dir}")
     print(f"name-regex: {name_regex!r}")
     print(f"prefer-replay: {prefer_replay}")
     print(f"recursive: {recursive}")
+    print(f"exclude-errors: {exclude_errors}")
+    if errors_json is not None:
+        print(f"errors-json: {errors_json}")
     print(f"有效文件数: {len(stats)}")
     if any(skipped.values()):
         print(f"跳过统计: {skipped}")
@@ -469,6 +659,8 @@ def _print_rich_summary(
     total_questions: int,
     weighted_acc: float,
     categories: list[CategoryStat],
+    exclude_errors: bool,
+    errors_json: Path | None,
 ) -> None:
     cfg = Table.grid(padding=(0, 2))
     cfg.add_column(style="cyan", justify="right")
@@ -477,6 +669,9 @@ def _print_rich_summary(
     cfg.add_row("name-regex", name_regex)
     cfg.add_row("prefer-replay", "开启" if prefer_replay else "关闭（仅用 aggregate）")
     cfg.add_row("recursive", "是" if recursive else "否")
+    cfg.add_row("exclude-errors", "开启" if exclude_errors else "关闭")
+    if errors_json is not None:
+        cfg.add_row("errors-json", str(errors_json))
     cfg.add_row("有效文件", str(len(stats)))
 
     skip_parts = [f"{k}={v}" for k, v in skipped.items() if v]
@@ -632,6 +827,17 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="不使用 Rich（纯文本表格，便于重定向/CI）",
     )
+    parser.add_argument(
+        "--exclude-errors",
+        action="store_true",
+        help="启用基于 errors.json 的错误题屏蔽（按 question 唯一匹配）",
+    )
+    parser.add_argument(
+        "--errors-json",
+        type=Path,
+        default=Path("outputs/locomo/errors.json"),
+        help="错误题列表 JSON 路径（默认: outputs/locomo/errors.json）",
+    )
 
     args = parser.parse_args(argv)
 
@@ -646,11 +852,21 @@ def main(argv: list[str] | None = None) -> int:
         print(f"目录不存在或不是目录: {input_dir}", file=sys.stderr)
         return 2
 
+    errors_list: list[dict[str, Any]] | None = None
+    if args.exclude_errors:
+        try:
+            errors_list = load_errors_json(args.errors_json)
+        except Exception as e:
+            print(f"加载 errors JSON 失败: {e}", file=sys.stderr)
+            return 2
+
     stats, skipped, merged_qt = run_summary(
         input_dir,
         name_pattern=name_pattern,
         prefer_replay=bool(args.prefer_replay),
         recursive=bool(args.recursive),
+        exclude_errors=bool(args.exclude_errors),
+        errors=errors_list,
     )
 
     total_questions = sum(s.total for s in stats)
@@ -671,6 +887,8 @@ def main(argv: list[str] | None = None) -> int:
             total_questions=total_questions,
             weighted_acc=weighted_acc,
             categories=categories,
+            exclude_errors=bool(args.exclude_errors),
+            errors_json=args.errors_json if args.exclude_errors else None,
         )
     else:
         _print_rich_summary(
@@ -685,6 +903,8 @@ def main(argv: list[str] | None = None) -> int:
             total_questions=total_questions,
             weighted_acc=weighted_acc,
             categories=categories,
+            exclude_errors=bool(args.exclude_errors),
+            errors_json=args.errors_json if args.exclude_errors else None,
         )
 
     by_qtype_payload: dict[str, Any] = {
@@ -705,6 +925,8 @@ def main(argv: list[str] | None = None) -> int:
         "name_regex": args.name_regex,
         "prefer_replay": bool(args.prefer_replay),
         "recursive": bool(args.recursive),
+        "exclude_errors": bool(args.exclude_errors),
+        "errors_json": str(args.errors_json.as_posix()) if args.exclude_errors else None,
         "skipped": skipped,
         "file_count": len(stats),
         "weighted": {
