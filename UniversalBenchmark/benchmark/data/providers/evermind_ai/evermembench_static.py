@@ -218,14 +218,17 @@ def _join_background(
 
 
 def _build_question(row: dict[str, Any], question_id: str) -> Question:
-    refs = list(row.get("reference_list") or [])
+    docs = list(row.get("reference_list") or [])
+    ref_strings = [str(d) for d in docs]
     return Question(
         question_id=question_id,
         question_text=str(row.get("query", "")),
         ground_truth=str(row.get("answer", "")),
         evidence=EvidenceBundle(
             evidence_type="evermembench.qar.reference_list",
-            payload={"documents": refs, "n_refs": len(refs)},
+            payload={"documents": docs, "n_refs": len(docs)},
+            references=ref_strings if ref_strings else None,
+            allow_missing_references=True,
         ),
         scoring=ScoringConfig(
             eval_mode="score",

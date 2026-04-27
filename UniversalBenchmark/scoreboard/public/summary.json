@@ -1,0 +1,210 @@
+{
+  "schema_version": 2,
+  "input_dir": "outputs/locomo",
+  "name_regex": ".*_replay_project_level\\.json$",
+  "prefer_replay": true,
+  "recursive": true,
+  "exclude_errors": true,
+  "errors_json": "outputs/locomo/errors.json",
+  "skipped": {
+    "not_file": 0,
+    "name_no_match": 43,
+    "json_error": 0,
+    "not_object": 0,
+    "no_stats": 0,
+    "zero_total": 0,
+    "turn_no_pass_field": 0,
+    "error_blocked_turns": 156,
+    "error_match_ambiguous": 0,
+    "error_match_not_found": 1560,
+    "error_match_invalid": 0
+  },
+  "file_count": 11,
+  "weighted": {
+    "passed": 1567,
+    "total": 1830,
+    "accuracy_percent": 85.62841530054645
+  },
+  "by_question_type": {
+    "adversarial": {
+      "passed": 393,
+      "total": 446,
+      "accuracy_percent": 88.11659192825113
+    },
+    "multi_hop": {
+      "passed": 224,
+      "total": 285,
+      "accuracy_percent": 78.59649122807018
+    },
+    "open_domain": {
+      "passed": 703,
+      "total": 784,
+      "accuracy_percent": 89.66836734693878
+    },
+    "single_hop": {
+      "passed": 195,
+      "total": 229,
+      "accuracy_percent": 85.1528384279476
+    },
+    "temporal_reasoning": {
+      "passed": 52,
+      "total": 86,
+      "accuracy_percent": 60.46511627906977
+    }
+  },
+  "dimensions": {
+    "datasets": [
+      "Percena/LoCoMo-MC10"
+    ],
+    "memories": [
+      "memecho"
+    ],
+    "agents": [
+      "openrouter/google/gemini-3-flash-preview"
+    ]
+  },
+  "by_group": [
+    {
+      "dataset_name": "Percena/LoCoMo-MC10",
+      "memory_type": "memecho",
+      "agent_model": "openrouter/google/gemini-3-flash-preview",
+      "passed": 1567,
+      "total": 1830,
+      "accuracy_percent": 85.62841530054645
+    }
+  ],
+  "per_file": [
+    {
+      "path": "outputs/locomo/memecho_conv-26_full_1_replay_project_level.json",
+      "basename": "memecho_conv-26_full_1_replay_project_level.json",
+      "passed": 144,
+      "total": 172,
+      "accuracy_percent": 83.72093023255815,
+      "source": "replay",
+      "dataset_name": "Percena/LoCoMo-MC10",
+      "memory_type": "memecho",
+      "agent_model": "openrouter/google/gemini-3-flash-preview",
+      "agent_identifier": "Agent[openrouter/google/gemini-2.5-flash|MemechoMemory]"
+    },
+    {
+      "path": "outputs/locomo/memecho_conv-30_full_1_replay_project_level.json",
+      "basename": "memecho_conv-30_full_1_replay_project_level.json",
+      "passed": 90,
+      "total": 98,
+      "accuracy_percent": 91.83673469387755,
+      "source": "replay",
+      "dataset_name": "Percena/LoCoMo-MC10",
+      "memory_type": "memecho",
+      "agent_model": "openrouter/google/gemini-3-flash-preview",
+      "agent_identifier": "Agent[openrouter/google/gemini-2.5-flash|MemechoMemory]"
+    },
+    {
+      "path": "outputs/locomo/memecho_conv-41_full_1_replay_project_level.json",
+      "basename": "memecho_conv-41_full_1_replay_project_level.json",
+      "passed": 154,
+      "total": 181,
+      "accuracy_percent": 85.0828729281768,
+      "source": "replay",
+      "dataset_name": "Percena/LoCoMo-MC10",
+      "memory_type": "memecho",
+      "agent_model": "openrouter/google/gemini-3-flash-preview",
+      "agent_identifier": "Agent[openrouter/google/gemini-2.5-flash|MemechoMemory]"
+    },
+    {
+      "path": "outputs/locomo/memecho_conv-42_0-249_2_replay_project_level.json",
+      "basename": "memecho_conv-42_0-249_2_replay_project_level.json",
+      "passed": 204,
+      "total": 228,
+      "accuracy_percent": 89.47368421052632,
+      "source": "replay",
+      "dataset_name": "Percena/LoCoMo-MC10",
+      "memory_type": "memecho",
+      "agent_model": "openrouter/google/gemini-3-flash-preview",
+      "agent_identifier": "Agent[openrouter/google/gemini-2.5-flash|MemechoMemory]"
+    },
+    {
+      "path": "outputs/locomo/memecho_conv-42_250-_3_replay_project_level.json",
+      "basename": "memecho_conv-42_250-_3_replay_project_level.json",
+      "passed": 8,
+      "total": 10,
+      "accuracy_percent": 80.0,
+      "source": "replay",
+      "dataset_name": "Percena/LoCoMo-MC10",
+      "memory_type": "memecho",
+      "agent_model": "openrouter/google/gemini-3-flash-preview",
+      "agent_identifier": "Agent[openrouter/google/gemini-2.5-flash|MemechoMemory]"
+    },
+    {
+      "path": "outputs/locomo/memecho_conv-43_full_1_replay_project_level.json",
+      "basename": "memecho_conv-43_full_1_replay_project_level.json",
+      "passed": 185,
+      "total": 225,
+      "accuracy_percent": 82.22222222222223,
+      "source": "replay",
+      "dataset_name": "Percena/LoCoMo-MC10",
+      "memory_type": "memecho",
+      "agent_model": "openrouter/google/gemini-3-flash-preview",
+      "agent_identifier": "Agent[openrouter/google/gemini-2.5-flash|MemechoMemory]"
+    },
+    {
+      "path": "outputs/locomo/memecho_conv-44_full_1_replay_project_level.json",
+      "basename": "memecho_conv-44_full_1_replay_project_level.json",
+      "passed": 136,
+      "total": 148,
+      "accuracy_percent": 91.89189189189189,
+      "source": "replay",
+      "dataset_name": "Percena/LoCoMo-MC10",
+      "memory_type": "memecho",
+      "agent_model": "openrouter/google/gemini-3-flash-preview",
+      "agent_identifier": "Agent[openrouter/google/gemini-2.5-flash|MemechoMemory]"
+    },
+    {
+      "path": "outputs/locomo/memecho_conv-47_full_1_replay_project_level.json",
+      "basename": "memecho_conv-47_full_1_replay_project_level.json",
+      "passed": 134,
+      "total": 175,
+      "accuracy_percent": 76.57142857142857,
+      "source": "replay",
+      "dataset_name": "Percena/LoCoMo-MC10",
+      "memory_type": "memecho",
+      "agent_model": "openrouter/google/gemini-3-flash-preview",
+      "agent_identifier": "Agent[openrouter/google/gemini-2.5-flash|MemechoMemory]"
+    },
+    {
+      "path": "outputs/locomo/memecho_conv-48_full_1_replay_project_level.json",
+      "basename": "memecho_conv-48_full_1_replay_project_level.json",
+      "passed": 196,
+      "total": 226,
+      "accuracy_percent": 86.72566371681415,
+      "source": "replay",
+      "dataset_name": "Percena/LoCoMo-MC10",
+      "memory_type": "memecho",
+      "agent_model": "openrouter/google/gemini-3-flash-preview",
+      "agent_identifier": "Agent[openrouter/google/gemini-2.5-flash|MemechoMemory]"
+    },
+    {
+      "path": "outputs/locomo/memecho_conv-49_full_1_replay_project_level.json",
+      "basename": "memecho_conv-49_full_1_replay_project_level.json",
+      "passed": 152,
+      "total": 180,
+      "accuracy_percent": 84.44444444444444,
+      "source": "replay",
+      "dataset_name": "Percena/LoCoMo-MC10",
+      "memory_type": "memecho",
+      "agent_model": "openrouter/google/gemini-3-flash-preview",
+      "agent_identifier": "Agent[openrouter/google/gemini-2.5-flash|MemechoMemory]"
+    },
+    {
+      "path": "outputs/locomo/memecho_conv-50_full_1_replay_project_level.json",
+      "basename": "memecho_conv-50_full_1_replay_project_level.json",
+      "passed": 164,
+      "total": 187,
+      "accuracy_percent": 87.70053475935829,
+      "source": "replay",
+      "dataset_name": "Percena/LoCoMo-MC10",
+      "memory_type": "memecho",
+      "agent_model": "openrouter/google/gemini-3-flash-preview",
+      "agent_identifier": "Agent[openrouter/google/gemini-2.5-flash|MemechoMemory]"
+    }
+  ]
+}

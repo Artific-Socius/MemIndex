@@ -149,6 +149,27 @@ python run_benchmark_lite.py \
     -v
 ```
 
+## `run_benchmark_lite` 结果文件（`--output` 模板）
+
+`--output` / `-o` 仅在**文件名**（basename）中解析占位符；目录路径按原样使用。
+
+| 占位符 | 含义 |
+|--------|------|
+| `{time}` | 默认时间戳：`%Y%m%d_%H%M%S` |
+| `{time:<strftime>}` | 按给定格式 `datetime.strftime`；格式非法时保留原文 |
+| `{n}` | 在输出目录下，将已有文件名与模板匹配后的最大编号 +1；无匹配则为 `1`。多个 `{n}` 时，匹配要求各处的数字一致。若算出的路径在磁盘上已存在（与扫描不一致等），会继续增大 `n` 直到得到未占用路径 |
+| 其它 `{...}` | 不替换、不抛错，原样出现在最终文件名中 |
+
+示例：`--output reports/run_{time}_{n}.json`。单测见 `tests/benchmark_lite/test_output_template.py`；编程场景可调用 `run_benchmark_lite.resolve_output_path(..., now=...)` 做确定性解析。
+
+## Scoreboard（结果汇总可视化）
+
+仓库内 `scoreboard/` 为 **Vite + React + TypeScript** 前端，读取 `scripts/summarize_locomo_results.py` 的 `--json-out` 汇总文件。汇总 JSON（`schema_version: 2`）在 `per_file` 中附带 **数据集名（benchmark）/ memory / agent 模型**，并提供 `dimensions` 与 `by_group` 供榜单筛选与聚合；`by_question_type` 在主榜下方以 **全宽题型榜** 展示。
+
+**口径**：当某结果文件统计来源为 `replay` 时，`per_file.agent_model` 与 `by_group` 聚合键优先使用 **重放评测模型**（如 `metadata.replay.replay_model`），而非原始 `run_config.model`。
+
+界面为 **浅色扁平榜单**（接近 OpenAI Web：白/灰底、细线、克制排版；仅 **配置总榜 + 全宽题型榜**）。详见 [scoreboard/README.md](../scoreboard/README.md)。
+
 ## 自定义评分器
 
 如果内置评分器不满足需求，用 `@register_evaluator` 注册自定义评分器：
@@ -379,6 +400,25 @@ for sr in result.scenario_results:
     passed = sr.passed_count
     print(f"场景 {sr.scenario_id}: {passed}/{total} 通过")
 ```
+
+### 结果汇总脚本（replay / aggregate 加权）
+
+对目录下多个 `BenchmarkResult` JSON 按**文件名正则**筛选后，用 `passed/total` 做**题目数加权**汇总。默认优先读取 **`aggregate.extra.replay`**（项目级重放评测）；若无 replay 块则回退 **`aggregate`**（原始跑分）。仅看原始分时使用 `--no-prefer-replay`。
+
+```bash
+# 在 UniversalBenchmark 根目录下
+uv run python scripts/summarize_locomo_results.py outputs/locomo
+uv run python scripts/summarize_locomo_results.py outputs/locomo --no-prefer-replay
+uv run python scripts/summarize_locomo_results.py outputs/locomo --name-regex '.*_replay_project_level\.json$'
+uv run python scripts/summarize_locomo_results.py outputs/locomo --recursive --json-out outputs/locomo/summary.json
+uv run python scripts/summarize_locomo_results.py outputs/locomo --plain
+```
+
+- 默认使用 **Rich** 输出表格与面板；`--plain` 为纯文本（便于 CI / 重定向）。
+- 除「分文件 + 文件级加权」外，会再输出一张 **按 `question_type`（evidence.payload）** 的逐题跨文件汇总表；`--json-out` 中对应字段为 `by_question_type`。
+- `--name-regex` 仅匹配**文件名（basename）**，默认 `.*replay.*\.json$`。
+- 输出表中 `source` 为 `replay` / `fallback_normal`（有 prefer-replay 但无 replay 块时用 aggregate）/ `normal`（`--no-prefer-replay`）。
+- Windows PowerShell 传正则时注意反斜杠转义；可改用不含 `\` 的子串模式，或单引号包裹 `'\.json$'` 等形式。
 
 ## 文件组织
 

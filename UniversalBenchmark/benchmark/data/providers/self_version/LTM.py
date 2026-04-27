@@ -105,13 +105,27 @@ def _is_eval_item(item: dict[str, Any]) -> bool:
     return item.get("score") is not None
 
 
-def _evidence_from_score(task_name: str, score_obj: dict[str, Any]) -> EvidenceBundle:
+def _normalize_ref_strings(raw: Any) -> list[str]:
+    if not isinstance(raw, list):
+        return []
+    return [str(x) for x in raw]
+
+
+def _evidence_from_score(
+    task_name: str,
+    score_obj: dict[str, Any],
+    *,
+    refs: list[str],
+) -> EvidenceBundle:
     payload: dict[str, Any] = {}
     if isinstance(score_obj.get("binary_items"), list):
         payload["binary_items"] = score_obj.get("binary_items") or []
+    allow_missing = len(refs) == 0
     return EvidenceBundle(
         evidence_type=f"self_version.ltm.{task_name}.score",
         payload=payload,
+        references=refs if refs else None,
+        allow_missing_references=allow_missing,
     )
 
 
@@ -151,7 +165,8 @@ def _turn_from_item(
         )
 
     score_answer = score_obj.get("answer", "")
-    evidence = _evidence_from_score(task_name, score_obj)
+    ref_strings = _normalize_ref_strings(refs)
+    evidence = _evidence_from_score(task_name, score_obj, refs=ref_strings)
     eval_mode = "weighted_binary" if evidence.payload.get("binary_items") else "binary"
     max_score = float(score_obj.get("score", 1.0) or 1.0)
 
