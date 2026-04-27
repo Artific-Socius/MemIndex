@@ -57,6 +57,8 @@ _evermembench_instance = EverMemBenchStaticBenchmark()
 _evermembench_dynamic_instance = EverMemBenchDynamicBenchmark()
 _locomo_mc10_instance = LocomoMc10Benchmark()
 _longmemeval_oracle_instance = LongMemEvalCleanedBenchmark(split_id="oracle")
+_longmemeval_s_instance = LongMemEvalCleanedBenchmark(split_id="s_cleaned")
+_longmemeval_m_instance = LongMemEvalCleanedBenchmark(split_id="m_cleaned")
 _ltm_lite_instance = LTMBenchmarkLite()
 
 BENCHMARKS: dict[str, Benchmark] = {
@@ -64,6 +66,8 @@ BENCHMARKS: dict[str, Benchmark] = {
     _evermembench_dynamic_instance.benchmark_name: _evermembench_dynamic_instance,
     _locomo_mc10_instance.benchmark_name: _locomo_mc10_instance,
     _longmemeval_oracle_instance.benchmark_name: _longmemeval_oracle_instance,
+    _longmemeval_s_instance.benchmark_name: _longmemeval_s_instance,
+    _longmemeval_m_instance.benchmark_name: _longmemeval_m_instance,
 }
 
 BENCHMARK_LITE: dict[str, BenchmarkLite] = {
@@ -109,9 +113,10 @@ def build_metadata() -> dict[str, Any]:
     dyn_raw = dyn.raw_root
     dyn_topics = dyn.topic_ids()
 
-    lme = _longmemeval_oracle_instance
-    lme_raw = lme.raw_root
-    lme_src = lme.source_path
+    lme_o = _longmemeval_oracle_instance
+    lme_s = _longmemeval_s_instance
+    lme_m = _longmemeval_m_instance
+    lme_raw = lme_o.raw_root
 
     _metadata = {
         "benchmarks": list(BENCHMARKS.keys()),
@@ -131,9 +136,17 @@ def build_metadata() -> dict[str, Any]:
         "locomo_mc10_jsonl_present": locomo_jsonl_present,
         "locomo_mc10_scene_count": locomo.row_count(),
         "longmemeval_cleaned_raw_root": str(lme_raw),
-        "longmemeval_cleaned_oracle_path": str(lme_src),
-        "longmemeval_cleaned_oracle_present": lme_src.is_file(),
-        "longmemeval_cleaned_oracle_scene_count": lme.row_count(),
+        "longmemeval_cleaned_oracle_path": str(lme_o.source_path),
+        "longmemeval_cleaned_oracle_present": lme_o.source_path.is_file(),
+        # oracle is small; safe to index for exact count
+        "longmemeval_cleaned_oracle_scene_count": lme_o.row_count(),
+        "longmemeval_cleaned_s_path": str(lme_s.source_path),
+        "longmemeval_cleaned_s_present": lme_s.source_path.is_file(),
+        # s/m can be huge; prefer fast count only if index already exists
+        "longmemeval_cleaned_s_scene_count": lme_s.indexed_row_count_fast(),
+        "longmemeval_cleaned_m_path": str(lme_m.source_path),
+        "longmemeval_cleaned_m_present": lme_m.source_path.is_file(),
+        "longmemeval_cleaned_m_scene_count": lme_m.indexed_row_count_fast(),
         "ltm_lite_name": ltm.name,
         "ltm_pool_name": LTM_POOL_NAME,
         "ltm_raw_root": str(ltm_raw),
@@ -178,6 +191,12 @@ def print_summary() -> None:
     print(f"LongMemEval-cleaned oracle path: {m['longmemeval_cleaned_oracle_path']}")
     print(f"LongMemEval-cleaned oracle present: {m['longmemeval_cleaned_oracle_present']}")
     print(f"LongMemEval-cleaned oracle scenes: {m['longmemeval_cleaned_oracle_scene_count']}")
+    print(f"LongMemEval-cleaned s path: {m['longmemeval_cleaned_s_path']}")
+    print(f"LongMemEval-cleaned s present: {m['longmemeval_cleaned_s_present']}")
+    print(f"LongMemEval-cleaned s scenes (indexed): {m['longmemeval_cleaned_s_scene_count']}")
+    print(f"LongMemEval-cleaned m path: {m['longmemeval_cleaned_m_path']}")
+    print(f"LongMemEval-cleaned m present: {m['longmemeval_cleaned_m_present']}")
+    print(f"LongMemEval-cleaned m scenes (indexed): {m['longmemeval_cleaned_m_scene_count']}")
     print(f"LTM ({m['ltm_lite_name']!r}) raw root: {m['ltm_raw_root']}")
     print(f"LTM raw present: {m['ltm_raw_present']}  scenarios: {m['ltm_scenario_count']}")
     if not m["evermembench_raw_present"]:

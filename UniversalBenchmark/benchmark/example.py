@@ -143,14 +143,9 @@ def _print_longmemeval_cleaned_demo(ubdata, *, doc_preview: int) -> None:
 
 
 def _interactive_demo_menu(ubdata) -> None:
-    """不刷全量 Registered benchmarks；用序号选择后才输出详情。"""
+    """不刷全量 Registered benchmarks；固定序号菜单，选择后才输出详情。"""
     demos: list[tuple[str, str, callable]] = []
-    demos.append(("1", "EverMemBench-Dynamic (topic=01)", lambda: _print_evermembench_dynamic_demo(ubdata, max_bg=MAX_BG_PREVIEW_CHARS, q_preview=160, doc_preview=220)))
-    demos.append(("2", "LongMemEval-cleaned (oracle:0)", lambda: _print_longmemeval_cleaned_demo(ubdata, doc_preview=180)))
 
-    # 额外：把 BENCHMARKS / BENCHMARK_LITE 也列出来，但只在选中后显示细节
-    data_names = list(ubdata.BENCHMARKS.keys())
-    lite_names = list(getattr(ubdata, "BENCHMARK_LITE", {}).keys())
     def _show_benchmark_detail(bench_name: str) -> None:
         print(f"\n=== Benchmark detail: {bench_name} ===")
         b = ubdata.get_benchmark(bench_name)
@@ -175,13 +170,36 @@ def _interactive_demo_menu(ubdata) -> None:
             ids = ids_fn()
             print(f"  scenario_ids preview: {ids[:5]!r}{'...' if len(ids) > 5 else ''}")
 
-    base = len(demos)
-    for i, n in enumerate(data_names, start=1):
-        demos.append((str(base + i), f"[Benchmark] {n}", lambda n=n: _show_benchmark_detail(n)))
+    def _warn_longmemeval_big(split_name: str) -> None:
+        if split_name in ("s_cleaned", "m_cleaned"):
+            print(
+                "  [提示] s/m split 首次查看会构建 offset 索引，可能需要较长时间，"
+                "并在 raw/.indexes 下生成 offsets.json。"
+            )
 
-    base = len(demos)
-    for i, n in enumerate(lite_names, start=1):
-        demos.append((str(base + i), f"[BenchmarkLite] {n}", lambda n=n: _show_lite_detail(n)))
+    # 固定序号：删除旧的 2（oracle demo），并让 6/7/8 对应 longmemeval 三个 split
+    demos.append(("1", "EverMemBench-Dynamic (topic=01 demo)", lambda: _print_evermembench_dynamic_demo(ubdata, max_bg=MAX_BG_PREVIEW_CHARS, q_preview=160, doc_preview=220)))
+    demos.append(("2", "[Benchmark] EverMind-AI/EverMemBench-Static", lambda: _show_benchmark_detail("EverMind-AI/EverMemBench-Static")))
+    demos.append(("3", "[Benchmark] EverMind-AI/EverMemBench-Dynamic", lambda: _show_benchmark_detail("EverMind-AI/EverMemBench-Dynamic")))
+    demos.append(("4", "[Benchmark] Percena/LoCoMo-MC10", lambda: _show_benchmark_detail("Percena/LoCoMo-MC10")))
+    demos.append(("5", "[BenchmarkLite] Self_Version/LTM", lambda: _show_lite_detail("Self_Version/LTM")))
+
+    demos.append(("6", "[Benchmark] xiaowu0162/longmemeval-cleaned:oracle", lambda: _show_benchmark_detail("xiaowu0162/longmemeval-cleaned:oracle")))
+    demos.append(("7", "[Benchmark] xiaowu0162/longmemeval-cleaned:s_cleaned", lambda: (_warn_longmemeval_big("s_cleaned"), _show_benchmark_detail("xiaowu0162/longmemeval-cleaned:s_cleaned"))))
+    demos.append(("8", "[Benchmark] xiaowu0162/longmemeval-cleaned:m_cleaned", lambda: (_warn_longmemeval_big("m_cleaned"), _show_benchmark_detail("xiaowu0162/longmemeval-cleaned:m_cleaned"))))
+
+    def _print_all() -> None:
+        """全量打印（便于排查注册表/路径/元数据）。"""
+        print("\n=== 全量打印 ===")
+        ubdata.print_summary()
+        print("\n=== Registered BENCHMARKS keys ===")
+        for k in ubdata.BENCHMARKS.keys():
+            print(f"  - {k}")
+        print("\n=== Registered BENCHMARK_LITE keys ===")
+        for k in getattr(ubdata, "BENCHMARK_LITE", {}).keys():
+            print(f"  - {k}")
+
+    demos.insert(0, ("0", "[All] print_summary + registries", _print_all))
 
     print("\n=== 选择序号显示详情（空输入退出）===")
     for k, title, _ in demos:

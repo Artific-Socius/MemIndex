@@ -87,6 +87,17 @@ def _build_offsets_for_json_array(path: Path) -> list[int]:
     Works in binary mode and is careful about strings/escapes.
     """
     offsets: list[int] = []
+
+    # Optional progress bar (tqdm is in project deps). Fallback: no progress.
+    tqdm = None
+    try:
+        from tqdm import tqdm as _tqdm  # type: ignore
+
+        tqdm = _tqdm
+    except Exception:
+        tqdm = None
+
+    total = path.stat().st_size
     with path.open("rb") as f:
         # Skip whitespace until '['
         while True:
@@ -102,45 +113,62 @@ def _build_offsets_for_json_array(path: Path) -> list[int]:
         in_str = False
         esc = False
         depth = 0
-        while True:
-            pos = f.tell()
-            b = f.read(1)
-            if not b:
-                break
-            c = b[0]
 
-            if in_str:
-                if esc:
-                    esc = False
+        pbar = tqdm(total=total, unit="B", unit_scale=True, desc=f"index {path.name}") if tqdm else None
+        # We've already consumed some bytes; initialize progress to current position.
+        if pbar:
+            pbar.update(f.tell())
+
+        chunk_size = 1024 * 1024  # 1MB
+        while True:
+            base_pos = f.tell()
+            chunk = f.read(chunk_size)
+            if not chunk:
+                break
+            if pbar:
+                pbar.update(len(chunk))
+
+            mv = memoryview(chunk)
+            for i in range(len(mv)):
+                c = mv[i]
+                pos = base_pos + i
+
+                if in_str:
+                    if esc:
+                        esc = False
+                        continue
+                    if c == 0x5C:  # backslash
+                        esc = True
+                        continue
+                    if c == 0x22:  # quote
+                        in_str = False
                     continue
-                if c == 0x5C:  # backslash
-                    esc = True
+
+                if c in (0x20, 0x09, 0x0D, 0x0A):  # whitespace
                     continue
                 if c == 0x22:  # quote
-                    in_str = False
-                continue
+                    in_str = True
+                    continue
 
-            if c in (0x20, 0x09, 0x0D, 0x0A):  # whitespace
-                continue
-            if c == 0x22:  # quote
-                in_str = True
-                continue
+                if c == 0x7B:  # '{'
+                    if depth == 0:
+                        offsets.append(pos)
+                    depth += 1
+                    continue
+                if c == 0x7D:  # '}'
+                    if depth <= 0:
+                        raise ValueError(f"{path}: unmatched '}}' at byte {pos}")
+                    depth -= 1
+                    continue
 
-            if c == 0x7B:  # '{'
-                if depth == 0:
-                    offsets.append(pos - 1)  # object starts at this '{'
-                depth += 1
-                continue
-            if c == 0x7D:  # '}'
-                if depth <= 0:
-                    raise ValueError(f"{path}: unmatched '}}' at byte {pos}")
-                depth -= 1
-                continue
+                # End of array
+                if c == 0x5D and depth == 0:  # ']'
+                    if pbar:
+                        pbar.close()
+                    return offsets
 
-            # End of array
-            if c == 0x5D and depth == 0:  # ']'
-                break
-
+        if pbar:
+            pbar.close()
         if depth != 0 or in_str:
             raise ValueError(f"{path}: unterminated JSON (depth={depth}, in_str={in_str})")
 
@@ -270,6 +298,9 @@ def _build_question(item: dict[str, Any], question_id: str) -> Question:
                 "haystack_session_ids": item.get("haystack_session_ids"),
                 "answer_session_ids": item.get("answer_session_ids"),
             },
+            # The dataset provides answer-bearing sessions but not explicit ref strings.
+            references=[],
+            allow_missing_references=True,
         ),
         scoring=ScoringConfig(eval_mode="score", eval_prompt_key="longmemeval_cleaned_qa", max_score=1.0),
     )
@@ -310,7 +341,7 @@ class LongMemEvalCleanedBenchmark(Benchmark):
     """
     Split-aware benchmark.
 
-    scene_id format: ``{split}:{idx}``, e.g. ``oracle:0`` or ``m_cleaned:12345``.
+    scene_id format: decimal index string within the split, e.g. ``\"0\"``.
     """
 
     def __init__(
@@ -325,7 +356,8 @@ class LongMemEvalCleanedBenchmark(Benchmark):
         if self._split is None:
             raise ValueError(f"Unknown split_id {split_id!r}. Known: {[s.split_id for s in SPLITS]!r}")
         self._path = self._raw_root / self._split.filename
-        self._offsets = _load_or_build_offsets(self._raw_root, self._split.filename)
+        # Offsets can be expensive to build (m_cleaned is multi-GB). Defer until needed.
+        self._offsets: list[int] | None = None
 
     @property
     def benchmark_name(self) -> str:
@@ -347,27 +379,50 @@ class LongMemEvalCleanedBenchmark(Benchmark):
     def source_path(self) -> Path:
         return self._path
 
+    def _ensure_offsets(self) -> list[int]:
+        if self._offsets is None:
+            self._offsets = _load_or_build_offsets(self._raw_root, self._split.filename)
+        return self._offsets
+
+    def indexed_row_count_fast(self) -> int | None:
+        """
+        Fast path: if offset index already exists, return its length; else return None
+        (do not scan/build the index).
+        """
+        src = self._raw_root / self._split.filename
+        if not src.is_file():
+            return 0
+        idx_path = _index_path_for(self._raw_root, self._split.filename)
+        if not idx_path.is_file():
+            return None
+        try:
+            with idx_path.open(encoding="utf-8") as f:
+                obj = json.load(f)
+            offs = obj.get("offsets") if isinstance(obj, dict) else None
+            if isinstance(offs, list):
+                return len(offs)
+        except Exception:
+            return None
+        return None
+
     def row_count(self) -> int:
-        return len(self._offsets)
+        return len(self._ensure_offsets())
 
     def list_scenes(self) -> list[str]:
-        return [f"{self._split_id}:{i}" for i in range(len(self._offsets))]
+        n = len(self._ensure_offsets())
+        return [str(i) for i in range(n)]
 
     def _load_item(self, idx: int) -> dict[str, Any]:
-        if idx < 0 or idx >= len(self._offsets):
-            raise KeyError(f"idx out of range: {idx} (0..{max(len(self._offsets)-1,0)})")
-        off = self._offsets[idx]
+        offsets = self._ensure_offsets()
+        if idx < 0 or idx >= len(offsets):
+            raise KeyError(f"idx out of range: {idx} (0..{max(len(offsets)-1,0)})")
+        off = offsets[idx]
         return _read_json_object_at(self._path, off)
 
     def get_scene(self, scene_id: str) -> Scene:
-        if ":" not in scene_id:
-            raise ValueError(f"scene_id must be '{self._split_id}:<idx>', got {scene_id!r}")
-        split, _, idx_s = scene_id.partition(":")
-        if split != self._split_id:
-            raise KeyError(f"scene_id split mismatch: expected {self._split_id!r}, got {split!r}")
-        if not idx_s.isdigit():
-            raise KeyError(f"scene_id idx must be integer string, got {idx_s!r}")
-        idx = int(idx_s)
+        if not scene_id.isdigit():
+            raise KeyError(f"scene_id must be a non-negative integer string, got {scene_id!r}")
+        idx = int(scene_id)
         item = self._load_item(idx)
         return LongMemEvalItemScene(scene_id=scene_id, item=item)
 
