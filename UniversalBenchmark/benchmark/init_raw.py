@@ -8,44 +8,12 @@
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import subprocess
 import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-
-# #region agent log
-_AGENT_DEBUG_LOG_NAME = "debug-54d7a2.log"
-_AGENT_SESSION = "54d7a2"
-
-
-def _agent_debug_log(
-    repo_root: Path,
-    *,
-    hypothesis_id: str,
-    location: str,
-    message: str,
-    data: dict,
-) -> None:
-    line = json.dumps(
-        {
-            "sessionId": _AGENT_SESSION,
-            "timestamp": int(time.time() * 1000),
-            "hypothesisId": hypothesis_id,
-            "location": location,
-            "message": message,
-            "data": data,
-            "runId": os.environ.get("DEBUG_RUN_ID", "run1"),
-        },
-        ensure_ascii=False,
-    )
-    with (repo_root / _AGENT_DEBUG_LOG_NAME).open("a", encoding="utf-8") as f:
-        f.write(line + "\n")
-
-
-# #endregion
 
 
 @dataclass(frozen=True)
@@ -75,6 +43,12 @@ _RAW_ENTRIES: tuple[RawDatasetSpec, ...] = (
         git_url="https://huggingface.co/datasets/EverMind-AI/EverMemBench-Dynamic",
         submodule_rel_posix=f"{_RAW_PREFIX}/EverMind-AI/EverMemBench-Dynamic",
         provider_rel_posix="evermind_ai",
+    ),
+    RawDatasetSpec(
+        id="xiaowu0162/longmemeval-cleaned",
+        git_url="https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned",
+        submodule_rel_posix=f"{_RAW_PREFIX}/xiaowu0162/LongMemEval/longmemeval-cleaned",
+        provider_rel_posix="xiaowu0162/LongMemEval",
     ),
     RawDatasetSpec(
         id="percena/locomo-mc10",
@@ -196,21 +170,6 @@ def init_one_raw_submodule(repo_root: Path, spec: RawDatasetSpec) -> None:
     rel = spec.submodule_rel_posix.replace("\\", "/")
     target = repo_root / Path(*rel.split("/"))
 
-    # #region agent log
-    _agent_debug_log(
-        repo_root,
-        hypothesis_id="H2",
-        location="init_raw.py:init_one_raw_submodule:entry",
-        message="init_one_raw_submodule start",
-        data={
-            "spec_id": spec.id,
-            "rel": rel,
-            "target_exists": target.exists(),
-            "is_gitlink": _submodule_path_is_gitlink(repo_root, rel),
-        },
-    )
-    # #endregion
-
     _ensure_provider_placeholders(repo_root, spec)
 
     os.chdir(repo_root)
@@ -232,32 +191,12 @@ def init_one_raw_submodule(repo_root: Path, spec: RawDatasetSpec) -> None:
             print("复用已有子模块 Git 目录（git submodule add --force）", file=sys.stderr)
         add_cmd.extend([spec.git_url, rel])
 
-        # #region agent log
-        _agent_debug_log(
-            repo_root,
-            hypothesis_id="H1",
-            location="init_raw.py:init_one_raw_submodule:before_submodule_add",
-            message="about to git submodule add",
-            data={"add_cmd": add_cmd, "mod_dir_exists": mod_dir.is_dir()},
-        )
-        # #endregion
-
         print(f"[{spec.id}] 注册子模块: {rel}（LFS smudge 已跳过，稍后单独 git lfs pull）")
         _run(
             add_cmd,
             cwd=repo_root,
             extra_env={"GIT_LFS_SKIP_SMUDGE": "1"},
         )
-
-        # #region agent log
-        _agent_debug_log(
-            repo_root,
-            hypothesis_id="H1",
-            location="init_raw.py:init_one_raw_submodule:after_submodule_add",
-            message="git submodule add completed",
-            data={"spec_id": spec.id, "rel": rel},
-        )
-        # #endregion
 
     print(f"[{spec.id}] 初始化 / 更新子模块: {rel}")
     _run(
@@ -324,16 +263,6 @@ def main(argv: list[str] | None = None) -> None:
     if not selected:
         print("错误: 没有匹配的数据集。", file=sys.stderr)
         raise SystemExit(2)
-
-    # #region agent log
-    _agent_debug_log(
-        repo_root,
-        hypothesis_id="H2",
-        location="init_raw.py:main:selected",
-        message="datasets to init",
-        data={"ids": [s.id for s in selected]},
-    )
-    # #endregion
 
     for spec in selected:
         init_one_raw_submodule(repo_root, spec)

@@ -7,3 +7,6 @@
 [submodule "UniversalBenchmark/benchmark/data/raw/EverMind-AI/EverMemBench-Dynamic"]
 	path = UniversalBenchmark/benchmark/data/raw/EverMind-AI/EverMemBench-Dynamic
 	url = https://huggingface.co/datasets/EverMind-AI/EverMemBench-Dynamic
+[submodule "UniversalBenchmark/benchmark/data/raw/xiaowu0162/LongMemEval/longmemeval-cleaned"]
+	path = UniversalBenchmark/benchmark/data/raw/xiaowu0162/LongMemEval/longmemeval-cleaned
+	url = https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned

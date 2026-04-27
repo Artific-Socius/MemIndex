@@ -250,6 +250,12 @@ class LocomoMc10Scene(Scene):
     def questions(self) -> Iterable[Question]:
         return self._questions
 
+    def get_question_by_id(self, question_id: str) -> Question:
+        # Keep compatibility with generic inspectors that assume a scene has question_id "0".
+        if question_id == "0" and self._questions:
+            return self._questions[0]
+        return super().get_question_by_id(question_id)
+
 
 class LocomoMc10Benchmark(Benchmark):
     """Percena LoCoMo-MC10: scene groups multiple queries by parsing `conv-*` from question_id."""

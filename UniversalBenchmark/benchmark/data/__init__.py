@@ -23,6 +23,10 @@ from .providers.percena.Locomo.locomo_mc10 import (
     POOL_NAME as LOCOMO_MC10_POOL_NAME,
     LocomoMc10Benchmark,
 )
+from .providers.xiaowu0162.LongMemEval.longmemeval_cleaned import (
+    POOL_NAME as LONGMEMEVAL_CLEANED_POOL_NAME,
+    LongMemEvalCleanedBenchmark,
+)
 from .providers.self_version.LTM import (
     POOL_NAME as LTM_POOL_NAME,
     LTMBenchmarkLite,
@@ -34,10 +38,12 @@ __all__ = [
     "POOL_NAME",
     "EVERMEMBENCH_DYNAMIC_POOL_NAME",
     "LOCOMO_MC10_POOL_NAME",
+    "LONGMEMEVAL_CLEANED_POOL_NAME",
     "LTM_POOL_NAME",
     "EverMemBenchStaticBenchmark",
     "EverMemBenchDynamicBenchmark",
     "LocomoMc10Benchmark",
+    "LongMemEvalCleanedBenchmark",
     "LTMBenchmarkLite",
     "get_benchmark",
     "get_benchmark_lite",
@@ -50,12 +56,14 @@ __all__ = [
 _evermembench_instance = EverMemBenchStaticBenchmark()
 _evermembench_dynamic_instance = EverMemBenchDynamicBenchmark()
 _locomo_mc10_instance = LocomoMc10Benchmark()
+_longmemeval_oracle_instance = LongMemEvalCleanedBenchmark(split_id="oracle")
 _ltm_lite_instance = LTMBenchmarkLite()
 
 BENCHMARKS: dict[str, Benchmark] = {
     _evermembench_instance.benchmark_name: _evermembench_instance,
     _evermembench_dynamic_instance.benchmark_name: _evermembench_dynamic_instance,
     _locomo_mc10_instance.benchmark_name: _locomo_mc10_instance,
+    _longmemeval_oracle_instance.benchmark_name: _longmemeval_oracle_instance,
 }
 
 BENCHMARK_LITE: dict[str, BenchmarkLite] = {
@@ -101,6 +109,10 @@ def build_metadata() -> dict[str, Any]:
     dyn_raw = dyn.raw_root
     dyn_topics = dyn.topic_ids()
 
+    lme = _longmemeval_oracle_instance
+    lme_raw = lme.raw_root
+    lme_src = lme.source_path
+
     _metadata = {
         "benchmarks": list(BENCHMARKS.keys()),
         "benchmark_lite": list(BENCHMARK_LITE.keys()),
@@ -118,6 +130,10 @@ def build_metadata() -> dict[str, Any]:
         "locomo_mc10_jsonl": str(locomo.jsonl_path),
         "locomo_mc10_jsonl_present": locomo_jsonl_present,
         "locomo_mc10_scene_count": locomo.row_count(),
+        "longmemeval_cleaned_raw_root": str(lme_raw),
+        "longmemeval_cleaned_oracle_path": str(lme_src),
+        "longmemeval_cleaned_oracle_present": lme_src.is_file(),
+        "longmemeval_cleaned_oracle_scene_count": lme.row_count(),
         "ltm_lite_name": ltm.name,
         "ltm_pool_name": LTM_POOL_NAME,
         "ltm_raw_root": str(ltm_raw),
@@ -158,6 +174,10 @@ def print_summary() -> None:
     print(f"LoCoMo-MC10 JSONL: {m['locomo_mc10_jsonl']}")
     print(f"LoCoMo-MC10 JSONL present: {m['locomo_mc10_jsonl_present']}")
     print(f"LoCoMo-MC10 indexed scenes: {m['locomo_mc10_scene_count']}")
+    print(f"LongMemEval-cleaned raw root: {m['longmemeval_cleaned_raw_root']}")
+    print(f"LongMemEval-cleaned oracle path: {m['longmemeval_cleaned_oracle_path']}")
+    print(f"LongMemEval-cleaned oracle present: {m['longmemeval_cleaned_oracle_present']}")
+    print(f"LongMemEval-cleaned oracle scenes: {m['longmemeval_cleaned_oracle_scene_count']}")
     print(f"LTM ({m['ltm_lite_name']!r}) raw root: {m['ltm_raw_root']}")
     print(f"LTM raw present: {m['ltm_raw_present']}  scenarios: {m['ltm_scenario_count']}")
     if not m["evermembench_raw_present"]:
@@ -179,6 +199,11 @@ def print_summary() -> None:
         print(
             "Hint: clone LoCoMo-MC10 submodule via "
             "UniversalBenchmark/benchmark/init_raw.py --only percena/locomo-mc10"
+        )
+    if not m["longmemeval_cleaned_oracle_present"]:
+        print(
+            "Hint: clone longmemeval-cleaned via "
+            "UniversalBenchmark/benchmark/init_raw.py --only xiaowu0162/longmemeval-cleaned"
         )
 
 
