@@ -187,6 +187,11 @@ def _interactive_demo_menu(ubdata) -> None:
     demos.append(("6", "[Benchmark] xiaowu0162/longmemeval-cleaned:oracle", lambda: _show_benchmark_detail("xiaowu0162/longmemeval-cleaned:oracle")))
     demos.append(("7", "[Benchmark] xiaowu0162/longmemeval-cleaned:s_cleaned", lambda: (_warn_longmemeval_big("s_cleaned"), _show_benchmark_detail("xiaowu0162/longmemeval-cleaned:s_cleaned"))))
     demos.append(("8", "[Benchmark] xiaowu0162/longmemeval-cleaned:m_cleaned", lambda: (_warn_longmemeval_big("m_cleaned"), _show_benchmark_detail("xiaowu0162/longmemeval-cleaned:m_cleaned"))))
+    
+    demos.append(("9", "[Benchmark] Mohammadta/BEAM:100K", lambda: _show_benchmark_detail("Mohammadta/BEAM:100K")))
+    demos.append(("10", "[Benchmark] Mohammadta/BEAM:500K", lambda: _show_benchmark_detail("Mohammadta/BEAM:500K")))
+    demos.append(("11", "[Benchmark] Mohammadta/BEAM:1M", lambda: _show_benchmark_detail("Mohammadta/BEAM:1M")))
+    demos.append(("12", "[Benchmark] Mohammadta/BEAM:10M", lambda: _show_benchmark_detail("Mohammadta/BEAM:10M")))
 
     def _print_all() -> None:
         """全量打印（便于排查注册表/路径/元数据）。"""

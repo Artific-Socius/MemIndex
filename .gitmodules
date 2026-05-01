@@ -10,3 +10,9 @@
 [submodule "UniversalBenchmark/benchmark/data/raw/xiaowu0162/LongMemEval/longmemeval-cleaned"]
 	path = UniversalBenchmark/benchmark/data/raw/xiaowu0162/LongMemEval/longmemeval-cleaned
 	url = https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned
+[submodule "UniversalBenchmark/benchmark/data/raw/Mohammadta/BEAM"]
+	path = UniversalBenchmark/benchmark/data/raw/Mohammadta/BEAM
+	url = https://huggingface.co/datasets/Mohammadta/BEAM
+[submodule "UniversalBenchmark/benchmark/data/raw/Mohammadta/BEAM-10M"]
+	path = UniversalBenchmark/benchmark/data/raw/Mohammadta/BEAM-10M
+	url = https://huggingface.co/datasets/Mohammadta/BEAM-10M

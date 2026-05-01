@@ -56,6 +56,18 @@ _RAW_ENTRIES: tuple[RawDatasetSpec, ...] = (
         submodule_rel_posix=f"{_RAW_PREFIX}/percena/Locomo/locomo-mc10",
         provider_rel_posix="percena/Locomo",
     ),
+    RawDatasetSpec(
+        id="mohammadta/BEAM",
+        git_url="https://huggingface.co/datasets/Mohammadta/BEAM",
+        submodule_rel_posix=f"{_RAW_PREFIX}/Mohammadta/BEAM",
+        provider_rel_posix="beam",
+    ),
+    RawDatasetSpec(
+        id="mohammadta/BEAM-10M",
+        git_url="https://huggingface.co/datasets/Mohammadta/BEAM-10M",
+        submodule_rel_posix=f"{_RAW_PREFIX}/Mohammadta/BEAM-10M",
+        provider_rel_posix="beam",
+    ),
 )
 
 

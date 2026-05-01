@@ -31,6 +31,7 @@ from .providers.self_version.LTM import (
     POOL_NAME as LTM_POOL_NAME,
     LTMBenchmarkLite,
 )
+from .providers.beam.beam_benchmark import BeamBenchmark
 
 __all__ = [
     "BENCHMARKS",
@@ -45,6 +46,7 @@ __all__ = [
     "LocomoMc10Benchmark",
     "LongMemEvalCleanedBenchmark",
     "LTMBenchmarkLite",
+    "BeamBenchmark",
     "get_benchmark",
     "get_benchmark_lite",
     "build_metadata",
@@ -60,6 +62,10 @@ _longmemeval_oracle_instance = LongMemEvalCleanedBenchmark(split_id="oracle")
 _longmemeval_s_instance = LongMemEvalCleanedBenchmark(split_id="s_cleaned")
 _longmemeval_m_instance = LongMemEvalCleanedBenchmark(split_id="m_cleaned")
 _ltm_lite_instance = LTMBenchmarkLite()
+_beam_100k_instance = BeamBenchmark(scale="100K")
+_beam_500k_instance = BeamBenchmark(scale="500K")
+_beam_1m_instance = BeamBenchmark(scale="1M")
+_beam_10m_instance = BeamBenchmark(scale="10M")
 
 BENCHMARKS: dict[str, Benchmark] = {
     _evermembench_instance.benchmark_name: _evermembench_instance,
@@ -68,6 +74,10 @@ BENCHMARKS: dict[str, Benchmark] = {
     _longmemeval_oracle_instance.benchmark_name: _longmemeval_oracle_instance,
     _longmemeval_s_instance.benchmark_name: _longmemeval_s_instance,
     _longmemeval_m_instance.benchmark_name: _longmemeval_m_instance,
+    _beam_100k_instance.benchmark_name: _beam_100k_instance,
+    _beam_500k_instance.benchmark_name: _beam_500k_instance,
+    _beam_1m_instance.benchmark_name: _beam_1m_instance,
+    _beam_10m_instance.benchmark_name: _beam_10m_instance,
 }
 
 BENCHMARK_LITE: dict[str, BenchmarkLite] = {
@@ -255,6 +265,13 @@ def inspect_scene(
         f"background_text preview ({len(bg)} chars, max_chars={background_preview_chars}): "
         f"{bg[:background_preview_chars]!r}{'...' if len(bg) > background_preview_chars else ''}"
     )
+    hist = scene.conversation_history()
+    print(f"conversation_history (turns): {len(hist)}")
+    if hist:
+        t0 = hist[0]
+        print(f"  turn[0] user: {t0.user_message[:background_preview_chars]!r}...")
+        print(f"  turn[0] asst: {t0.assistant_response[:background_preview_chars]!r}...")
+
     print(f"question_count: {scene.question_count()}")
     if scene.question_count() == 0:
         print("(no questions)")
